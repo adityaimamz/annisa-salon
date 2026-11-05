@@ -92,24 +92,33 @@ function Shell({ userId }: { userId: string }) {
 
   return (
     <div className="app">
-      <aside className="side" aria-label="Menu aplikasi">
+      <aside className="side" aria-label="Panel samping">
         <div className="brand">
           <img src="/assets/mark-light.png" alt="" width="28" height="32" />
           <span className="brand-name">An-Nisa<small>Kasir &amp; Keuangan</small></span>
         </div>
-        {nav.map((n) => (
-          <button key={n.id} className="navi" aria-current={current === n.id ? 'page' : undefined} onClick={() => setView(n.id)}>
-            {n.icon(18)}{n.label}
-          </button>
-        ))}
-        <div className="who">
-          <b>{profile.name}</b>{profile.role === 'owner' ? 'Pemilik' : 'Kasir'}
-          <button className="logout" type="button" onClick={logout} style={{ display: 'block' }}>Keluar</button>
+        <p className="side-label">Menu</p>
+        <nav className="side-nav" aria-label="Menu utama">
+          {nav.map((n) => (
+            <button key={n.id} className="navi" aria-current={current === n.id ? 'page' : undefined} onClick={() => setView(n.id)}>
+              {n.icon(18)}{n.label}
+            </button>
+          ))}
+        </nav>
+        <div className="side-foot">
+          <a className="navi" href="/">{Icon.back(18)}Kembali ke website</a>
+          <div className="who">
+            <span className="avatar" aria-hidden="true">{profile.name.trim().charAt(0).toUpperCase()}</span>
+            <span className="who-text"><b>{profile.name}</b>{profile.role === 'owner' ? 'Pemilik' : 'Kasir'}</span>
+            <button className="logout" type="button" onClick={logout}>Keluar</button>
+          </div>
         </div>
       </aside>
 
       <main className="main">
-        <div className="mobile-banner"><strong>An-Nisa · {profile.name}</strong><button type="button" onClick={logout}>Keluar</button></div>
+        <div className="mobile-banner"><strong>An-Nisa · {profile.name}</strong>
+          <span className="banner-links"><a href="/">Ke website</a><button type="button" onClick={logout}>Keluar</button></span>
+        </div>
         <div hidden={current !== 'kasir'} style={{ height: '100%' }}>
           <KasirView cats={cats} items={items} therapists={therapists} profile={profile} onPaid={() => setRefreshKey((k) => k + 1)} />
         </div>

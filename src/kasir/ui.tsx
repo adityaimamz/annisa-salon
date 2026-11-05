@@ -34,6 +34,7 @@ export const Icon = {
   transaksi: (s = 18) => svg(<><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3z" /><path d="M9 8h6M9 12h6" /></>, s),
   keuangan: (s = 18) => svg(<path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />, s),
   harga: (s = 18) => svg(<><path d="M3 12V4h8l10 10-8 8L3 12z" /><circle cx="7.5" cy="8.5" r="1.5" /></>, s),
+  back: (s = 18) => svg(<path d="M19 12H5M11 6l-6 6 6 6" />, s),
   search: () => svg(<><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></>),
   close: () => svg(<path d="M6 6l12 12M18 6L6 18" />, 16),
   edit: () => svg(<path d="M4 20h4L19 9l-4-4L4 16v4z" />, 16),
