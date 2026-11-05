@@ -226,8 +226,9 @@ button,input,select,textarea{font:inherit;color:inherit}
 
 /* ---------- menu ---------- */
 .menu{border-top:1px solid var(--ink)}
-.menu-group{display:grid;gap:12px;padding:36px 0 40px;border-bottom:1px solid var(--line)}
-@media (min-width:880px){.menu-group{grid-template-columns:300px 1fr;gap:48px}}
+.menu-group{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding:36px 0 40px;border-bottom:1px solid var(--line)}
+.menu-group > *{min-width:0}
+@media (min-width:880px){.menu-group{grid-template-columns:300px minmax(0,1fr);gap:48px}}
 .menu-cat h3{font-family:var(--serif);font-weight:400;font-size:32px;line-height:1.05}
 .menu-cat p{color:var(--ink-3);font-size:14.5px;margin-top:6px;max-width:250px}
 .menu-list{list-style:none}
