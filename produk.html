@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skincare Gbee Glow Beauty · An-Nisa Muslimah Salon Tegal</title>
+<meta name="description" content="Beli skincare Gbee Glow Beauty di An-Nisa Muslimah Salon Tegal: day & night cream, facial wash, toner, jelly face, cleansing milk, dan green mask. Pesan lewat WhatsApp, ambil di salon.">
+<meta name="theme-color" content="#1D4D3A">
+<link rel="icon" type="image/png" href="assets/mark.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gloock&family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+
+<header class="site-head" id="head">
+  <div class="wrap head-row">
+    <a href="index.html" class="brand" aria-label="An-Nisa Muslimah Salon, halaman depan">
+      <img src="assets/mark.png" alt="" width="30" height="34">
+      <span class="brand-name">An-Nisa<small>Muslimah Salon · Tegal</small></span>
+    </a>
+    <nav class="nav" aria-label="Navigasi utama">
+      <a href="index.html#hasil">Hasil</a>
+      <a href="index.html#layanan">Layanan</a>
+      <a class="nav-shop" href="produk.html" aria-current="page"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 8h14l-1 12H6L5 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>Produk</a>
+      <a href="index.html#lokasi">Lokasi</a>
+    </nav>
+    <a class="btn btn-green btn-sm head-cta" href="index.html#booking">Booking</a>
+  </div>
+</header>
+
+<main>
+  <section class="p-hero">
+    <div class="wrap">
+      <p class="kicker">Produk · Gbee Glow Beauty</p>
+      <h1>Skincare yang dipakai di facial kami.</h1>
+      <p class="lead">Seri Gbee yang sama dengan Facial Glow Beauty di salon, sekarang bisa dibawa pulang. Pilih produknya, lalu kirim pesanan lewat WhatsApp. Stok dan pengambilan kami konfirmasi di chat.</p>
+      <div class="p-strip" aria-hidden="true">
+        <img src="assets/produk/krim-pink-gold.webp" alt="" width="142" height="142">
+        <img src="assets/produk/krim-set.webp" alt="" width="142" height="142">
+        <img src="assets/produk/serum-gold.webp" alt="" width="142" height="142">
+        <img src="assets/produk/rice-jelly.webp" alt="" width="142" height="142">
+        <img src="assets/produk/lotion.webp" alt="" width="124" height="124">
+      </div>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top:48px">
+    <div class="wrap">
+      <div class="p-tabs">
+        <div class="tabs" role="group" aria-label="Pilih seri" id="ptabs"></div>
+      </div>
+      <div id="catalog"></div>
+      <p class="p-foot-note">Harga sesuai pricelist Gbee Glow Beauty per 1 Mei 2026.</p>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot-top">
+      <div>
+        <div class="brand">
+          <img src="assets/mark-light.png" alt="" width="30" height="34">
+          <span class="brand-name">An-Nisa Muslimah Salon</span>
+        </div>
+        <p style="margin-top:14px;max-width:300px">Salon khusus perempuan di Tegal Selatan. Buka setiap hari, 09.00–19.00.</p>
+      </div>
+      <div>
+        <h4>Halaman</h4>
+        <ul>
+          <li><a href="index.html#hasil">Hasil</a></li>
+          <li><a href="index.html#layanan">Layanan</a></li>
+          <li><a href="produk.html">Produk</a></li>
+          <li><a href="index.html#booking">Booking</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Kontak</h4>
+        <ul>
+          <li><a href="https://wa.me/6285728958582" target="_blank" rel="noopener">WhatsApp 0857-2895-8582</a></li>
+          <li><a href="https://maps.app.goo.gl/zMgAMAsnqgPoogeH6" target="_blank" rel="noopener">Google Maps</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© <span id="yr">2026</span> An-Nisa Muslimah Salon</span>
+      <span>Jl. Teuku Umar No.58, Tegal</span>
+    </div>
+  </div>
+</footer>
+
+<div class="cartbar" id="cartbar">
+  <div class="inner">
+    <div class="sum"><span id="cbCount">0 produk</span><b id="cbTotal">Rp0</b></div>
+    <button class="btn btn-green" id="openCart" type="button">Lihat keranjang</button>
+  </div>
+</div>
+
+<dialog class="drawer" id="drawer" aria-labelledby="drawerTitle">
+  <div class="drawer-in">
+    <div class="drawer-head">
+      <h2 id="drawerTitle">Keranjang</h2>
+      <button class="x" id="closeCart" type="button" aria-label="Tutup keranjang">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="drawer-body">
+      <div id="cartItems"></div>
+      <form class="c-form" id="orderForm" novalidate>
+        <div class="field">
+          <label for="oNama">Nama</label>
+          <input class="input" id="oNama" autocomplete="given-name" placeholder="Nama untuk pesanan">
+        </div>
+        <div class="field">
+          <span class="label">Pengambilan</span>
+          <div class="chips">
+            <label class="chip"><input type="radio" name="ambil" value="Ambil di salon" checked><span>Ambil di salon</span></label>
+            <label class="chip"><input type="radio" name="ambil" value="Minta dikirim (mohon info ongkir)"><span>Minta dikirim</span></label>
+          </div>
+        </div>
+        <div class="field">
+          <label for="oCatatan">Catatan <span class="opt">(opsional)</span></label>
+          <textarea class="input" id="oCatatan" placeholder="Misal: alamat kirim, atau mau diambil sekalian facial hari Sabtu"></textarea>
+        </div>
+      </form>
+    </div>
+    <div class="drawer-foot">
+      <div class="total"><span>Total</span><b id="dTotal">Rp0</b></div>
+      <button class="btn btn-green" id="sendOrder" type="button">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.87.5 3.62 1.44 5.13L2 22l5.13-1.55a9.85 9.85 0 0 0 4.9 1.31h.01c5.46 0 9.91-4.45 9.91-9.91S17.5 2 12.04 2z"/></svg>
+        Pesan lewat WhatsApp
+      </button>
+      <small>Belum ada pembayaran di sini. Total dan stok dikonfirmasi admin di WhatsApp.</small>
+    </div>
+  </div>
+</dialog>
+
+<script>
+(() => {
+  const WA = '6285728958582';
+  // Harga dari pricelist Gbee Glow Beauty, update 1 Mei 2026.
+  const SERIES = [
+    { id: 'pink', name: 'Seri Pink', items: [
+      ['Day Cream Pink', '12,5 g', 75000],
+      ['Night Cream Pink', '12,5 g', 75000],
+      ['Facial Wash Pink', '60 ml', 45000],
+    ]},
+    { id: 'gold', name: 'Seri Gold', items: [
+      ['Day Cream Gold', '12,5 g', 95000],
+      ['Day Gold Small', '5 g', 55000],
+      ['Night Cream Gold', '12,5 g', 85000],
+      ['Facial Wash Gold', '60 ml', 65000],
+    ]},
+    { id: 'rice', name: 'Seri Rice', items: [
+      ['Moist Rice Cream', '12,5 g', 55000],
+      ['Rice Facial Wash', '60 ml', 40000],
+      ['Rice Jelly Face', '15 ml', 55000],
+    ]},
+    { id: 'toner', name: 'Toner', items: [
+      ['Oxy Beauty', '100 ml', 50000],
+      ['Toner Watermelon', '100 ml', 50000],
+      ['Toner Lemon Juice', '100 ml', 50000],
+      ['Toner Lemon Juice', '60 ml', 40000],
+    ]},
+    { id: 'cleansing', name: 'Cleansing Milk', items: [
+      ['Cleansing Milk', '100 ml', 50000],
+      ['Cleansing Milk', '60 ml', 40000],
+    ]},
+    { id: 'jelly', name: 'Jelly Face', items: [
+      ['Bee Jelly Face', '15 ml', 70000],
+      ['Cardamom & Rose', '30 ml', 75000],
+      ['Cucumber Jelly Face', '15 ml', 55000],
+    ]},
+    { id: 'men', name: 'Untuk Pria', items: [
+      ['Face Lotion Men', '50 g', 70000],
+      ['Facial Wash Men', '60 ml', 40000],
+    ]},
+    { id: 'mask', name: 'Masker', items: [
+      ['Green Mask', '30 g', 70000],
+    ]},
+  ];
+
+  const rp = (n) => 'Rp' + n.toLocaleString('id-ID');
+  const PRODUCTS = {};
+  SERIES.forEach((s) => s.items.forEach(([name, size, price]) => {
+    const id = (name + '-' + size).toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    PRODUCTS[id] = { id, name, size, price, series: s.id };
+  }));
+
+  // cart: { productId: qty }, kept between visits
+  let cart = {};
+  try { cart = JSON.parse(localStorage.getItem('annisa-cart') || '{}'); } catch {}
+  Object.keys(cart).forEach((k) => { if (!PRODUCTS[k] || cart[k] < 1) delete cart[k]; });
+  const save = () => localStorage.setItem('annisa-cart', JSON.stringify(cart));
+
+  // ---------- render catalog ----------
+  const catalog = document.getElementById('catalog');
+  catalog.innerHTML = SERIES.map((s) => `
+    <section class="p-group" data-s="${s.id}" aria-labelledby="g-${s.id}">
+      <h2 id="g-${s.id}">${s.name}<small>${s.items.length} produk</small></h2>
+      <ul class="p-list">
+        ${Object.values(PRODUCTS).filter((p) => p.series === s.id).map((p) => `
+          <li class="p-item">
+            <span class="p-name">${p.name}</span>
+            <span class="p-meta"><span class="p-size">${p.size}</span><span class="p-price">${rp(p.price)}</span></span>
+            <span class="p-act" data-id="${p.id}"></span>
+          </li>`).join('')}
+      </ul>
+    </section>`).join('');
+
+  const tabs = document.getElementById('ptabs');
+  tabs.innerHTML = `<button class="tab" data-f="all" aria-pressed="true">Semua</button>` +
+    SERIES.map((s) => `<button class="tab" data-f="${s.id}" aria-pressed="false">${s.name}</button>`).join('');
+  tabs.addEventListener('click', (e) => {
+    const t = e.target.closest('.tab'); if (!t) return;
+    tabs.querySelectorAll('.tab').forEach((x) => x.setAttribute('aria-pressed', x === t));
+    document.querySelectorAll('.p-group').forEach((g) => { g.hidden = !(t.dataset.f === 'all' || g.dataset.s === t.dataset.f); });
+  });
+
+  const stepper = (id, qty, label) => `
+    <span class="stepper" role="group" aria-label="Jumlah ${label}">
+      <button type="button" data-dec="${id}" aria-label="Kurangi">−</button>
+      <span aria-live="polite">${qty}</span>
+      <button type="button" data-inc="${id}" aria-label="Tambah">+</button>
+    </span>`;
+
+  function renderActions() {
+    document.querySelectorAll('.p-act').forEach((el) => {
+      const p = PRODUCTS[el.dataset.id];
+      const q = cart[p.id] || 0;
+      el.innerHTML = q
+        ? stepper(p.id, q, p.name)
+        : `<button class="add" type="button" data-inc="${p.id}">+ Keranjang</button>`;
+    });
+  }
+
+  // ---------- cart ----------
+  const cartbar = document.getElementById('cartbar');
+  const drawer = document.getElementById('drawer');
+  const totals = () => Object.entries(cart).reduce((a, [id, q]) => (
+    { count: a.count + q, sum: a.sum + PRODUCTS[id].price * q }), { count: 0, sum: 0 });
+
+  function renderCart() {
+    const { count, sum } = totals();
+    document.getElementById('cbCount').textContent = `${count} produk`;
+    document.getElementById('cbTotal').textContent = rp(sum);
+    document.getElementById('dTotal').textContent = rp(sum);
+    cartbar.classList.toggle('show', count > 0);
+    document.body.classList.toggle('has-cart', count > 0);
+    const ids = Object.keys(cart);
+    document.getElementById('cartItems').innerHTML = ids.length
+      ? ids.map((id) => {
+          const p = PRODUCTS[id], q = cart[id];
+          return `<div class="c-item">
+            <span class="p-name">${p.name} <span style="font-weight:400;color:var(--ink-3)">${p.size}</span></span>
+            ${stepper(id, q, p.name)}
+            <span class="sub2">${q} × ${rp(p.price)} = ${rp(q * p.price)}</span>
+          </div>`;
+        }).join('')
+      : `<p class="c-empty">Keranjang masih kosong.</p>`;
+    document.getElementById('sendOrder').disabled = !ids.length;
+  }
+
+  function change(id, d) {
+    cart[id] = (cart[id] || 0) + d;
+    if (cart[id] < 1) delete cart[id];
+    save(); renderActions(); renderCart();
+  }
+  document.addEventListener('click', (e) => {
+    const inc = e.target.closest('[data-inc]'); if (inc) return change(inc.dataset.inc, 1);
+    const dec = e.target.closest('[data-dec]'); if (dec) return change(dec.dataset.dec, -1);
+  });
+
+  document.getElementById('openCart').onclick = () => drawer.showModal();
+  document.getElementById('closeCart').onclick = () => drawer.close();
+  drawer.addEventListener('click', (e) => { if (e.target === drawer) drawer.close(); });
+
+  document.getElementById('sendOrder').onclick = () => {
+    const nama = document.getElementById('oNama');
+    if (!nama.value.trim()) { nama.focus(); nama.placeholder = 'Isi nama dulu ya'; return; }
+    const { sum } = totals();
+    const lines = [
+      'Assalamualaikum kak, saya mau pesan produk Gbee di An-Nisa Muslimah Salon.',
+      '',
+      ...Object.entries(cart).map(([id, q]) => `• ${q}x ${PRODUCTS[id].name} ${PRODUCTS[id].size} = ${rp(q * PRODUCTS[id].price)}`),
+      '',
+      `Total: ${rp(sum)}`,
+      `Nama: ${nama.value.trim()}`,
+      `Pengambilan: ${document.querySelector('input[name="ambil"]:checked').value}`,
+    ];
+    const cat = document.getElementById('oCatatan').value.trim();
+    if (cat) lines.push(`Catatan: ${cat}`);
+    window.open(`https://wa.me/${WA}?text=${encodeURIComponent(lines.join('\n'))}`, '_blank', 'noopener');
+  };
+
+  // header border on scroll
+  const head = document.getElementById('head');
+  addEventListener('scroll', () => head.classList.toggle('scrolled', scrollY > 8), { passive: true });
+  document.getElementById('yr').textContent = new Date().getFullYear();
+
+  renderActions(); renderCart();
+})();
+</script>
+</body>
+</html>
