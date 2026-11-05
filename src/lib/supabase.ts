@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 const url = import.meta.env.PUBLIC_SUPABASE_URL;
-const anon = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+const anon = import.meta.env.PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
 export const supabaseReady = Boolean(url && anon);
 
