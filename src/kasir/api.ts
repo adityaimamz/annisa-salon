@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 import type {
-  CartLine, Category, Expense, Item, PayMethod, Profile, Therapist, Tx, TxLine,
+  CartLine, Category, Expense, Item, PayMethod, Profile, StaffMember, Therapist, Tx, TxLine,
 } from './types';
 
 function db() {
@@ -154,6 +154,34 @@ export async function addExpense(e: { cat: string; amt: number; note: string; at
   const { error } = await db().from('expenses').insert({
     category: e.cat, amount: e.amt, note: e.note || null, created_at: new Date(e.at).toISOString(),
   });
+  fail(error);
+}
+
+/* ---------- karyawan (hanya owner; ditegakkan RPC + RLS) ---------- */
+export async function listStaff(): Promise<StaffMember[]> {
+  const { data, error } = await db().rpc('list_staff');
+  fail(error);
+  return (data as { id: string; name: string; email: string; role: StaffMember['role']; active: boolean; created_at: string }[])
+    .map((r) => ({ id: r.id, name: r.name, email: r.email, role: r.role, active: r.active, createdAt: new Date(r.created_at).getTime() }));
+}
+
+export async function createStaff(name: string, email: string, password: string) {
+  const { error } = await db().rpc('create_staff', { p_name: name, p_email: email, p_password: password });
+  fail(error);
+}
+
+export async function resetStaffPassword(id: string, password: string) {
+  const { error } = await db().rpc('reset_staff_password', { p_id: id, p_password: password });
+  fail(error);
+}
+
+export async function setStaffActive(id: string, active: boolean) {
+  const { error } = await db().from('profiles').update({ active }).eq('id', id).eq('role', 'kasir');
+  fail(error);
+}
+
+export async function deleteStaff(id: string) {
+  const { error } = await db().rpc('delete_staff', { p_id: id });
   fail(error);
 }
 

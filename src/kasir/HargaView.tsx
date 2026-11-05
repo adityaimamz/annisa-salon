@@ -1,19 +1,20 @@
 import { useEffect, useState } from 'react';
 import { money, num, rp, slugify } from './format';
 import type { Category, Item, Variant } from './types';
-import { CloseBtn, Icon, Sheet, useToast } from './ui';
+import { CloseBtn, Icon, Select, Sheet, useConfirm, useToast } from './ui';
 
 interface Props {
   cats: Category[];
   items: Item[];
   onSave: (it: Item) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  readOnly?: boolean; // mode karyawan: hanya melihat daftar harga
 }
 
 type Kind = 'layanan' | 'produk';
 const isProduk = (it: { cat: string }) => it.cat === 'produk';
 
-export default function HargaView({ cats, items, onSave, onDelete }: Props) {
+export default function HargaView({ cats, items, onSave, onDelete, readOnly = false }: Props) {
   const toast = useToast();
   const [kind, setKind] = useState<Kind>('layanan');
   const [cat, setCat] = useState('all');
@@ -51,13 +52,17 @@ export default function HargaView({ cats, items, onSave, onDelete }: Props) {
       <div className="v-head">
         <div><h1>Harga</h1>
           <p className="meta">
-            {kind === 'layanan'
+            {readOnly
+              ? 'Daftar harga Kasir. Perubahan harga hanya bisa dilakukan pemilik.'
+              : kind === 'layanan'
               ? 'Harga layanan dipakai di Kasir dan tampil di daftar layanan website.'
               : 'Harga Kasir dan harga website produk diatur terpisah. Produk muncul di landing dan halaman Produk.'}
           </p></div>
-        <button className="btn btn-green btn-sm" type="button" onClick={() => setEditing('new')}>
-          {kind === 'layanan' ? '+ Tambah layanan' : '+ Tambah produk'}
-        </button>
+        {!readOnly && (
+          <button className="btn btn-green btn-sm" type="button" onClick={() => setEditing('new')}>
+            {kind === 'layanan' ? '+ Tambah layanan' : '+ Tambah produk'}
+          </button>
+        )}
       </div>
       <div className="pad">
         <div className="kind-tabs" role="tablist" aria-label="Jenis item">
@@ -85,7 +90,7 @@ export default function HargaView({ cats, items, onSave, onDelete }: Props) {
         {groups.length ? groups.map(([c, arr]) => (
           <section className="pr-group" key={c.id}>
             <h2>{c.name} · {arr.length}</h2>
-            <div className="pr-card">
+            <div className={`pr-card${readOnly ? ' ro' : ''}`}>
               {arr.map((it) => (
                 <div className={`pr-item ${it.off ? 'off' : ''}`} key={it.id}>
                   <div className="pr-main">
@@ -97,15 +102,21 @@ export default function HargaView({ cats, items, onSave, onDelete }: Props) {
                     </div>
                     {it.variants
                       ? <span className="pr-vlabel">{it.variants.length} pilihan · {it.vlabel ?? ''}</span>
-                      : <MoneyInput value={it.price ?? 0} label={it.name} onCommit={(v) => setPrice(it, -1, v)} />}
-                    <label className="switch" title={it.off ? 'Tampilkan di Kasir dan website' : 'Sembunyikan dari Kasir dan website'}>
-                      <input type="checkbox" checked={!it.off} aria-label={`${it.name} tampil di Kasir dan website`}
-                        onChange={(e) => run(onSave({ ...it, off: !e.target.checked }), e.target.checked ? `${it.name} tampil lagi di Kasir dan website` : `${it.name} disembunyikan dari Kasir dan website`)} />
-                      <span />
-                    </label>
-                    <button className="icon-btn" type="button" aria-label={`Ubah ${it.name}`} onClick={() => setEditing(it)}>{Icon.edit()}</button>
+                      : readOnly
+                        ? <span className="pr-price">{rp(it.price ?? 0)}</span>
+                        : <MoneyInput value={it.price ?? 0} label={it.name} onCommit={(v) => setPrice(it, -1, v)} />}
+                    {!readOnly && (
+                      <>
+                        <label className="switch" title={it.off ? 'Tampilkan di Kasir dan website' : 'Sembunyikan dari Kasir dan website'}>
+                          <input type="checkbox" checked={!it.off} aria-label={`${it.name} tampil di Kasir dan website`}
+                            onChange={(e) => run(onSave({ ...it, off: !e.target.checked }), e.target.checked ? `${it.name} tampil lagi di Kasir dan website` : `${it.name} disembunyikan dari Kasir dan website`)} />
+                          <span />
+                        </label>
+                        <button className="icon-btn" type="button" aria-label={`Ubah ${it.name}`} onClick={() => setEditing(it)}>{Icon.edit()}</button>
+                      </>
+                    )}
                   </div>
-                  {it.cat === 'produk' && !it.variants && (
+                  {!readOnly && it.cat === 'produk' && !it.variants && (
                     <div className="pr-vars">
                       <div className="pr-var">
                         <span>Harga di website <small style={{ color: 'var(--ink-3)' }}>· landing &amp; halaman Produk</small></span>
@@ -119,7 +130,9 @@ export default function HargaView({ cats, items, onSave, onDelete }: Props) {
                       {it.variants.map((v, i) => (
                         <div className="pr-var" key={v[0]}>
                           <span>{v[0]}</span>
-                          <MoneyInput value={v[1]} label={`${it.name} ${v[0]}`} onCommit={(n) => setPrice(it, i, n)} />
+                          {readOnly
+                            ? <span className="pr-price">{rp(v[1])}</span>
+                            : <MoneyInput value={v[1]} label={`${it.name} ${v[0]}`} onCommit={(n) => setPrice(it, i, n)} />}
                           <span className="sp" /><span className="sp" />
                         </div>
                       ))}
@@ -132,7 +145,7 @@ export default function HargaView({ cats, items, onSave, onDelete }: Props) {
         )) : <p className="empty-cart">Tidak ada item yang cocok.</p>}
       </div>
 
-      <ItemEditor
+      {!readOnly && <ItemEditor
         target={editing}
         kind={kind}
         cats={poolCats}
@@ -141,7 +154,7 @@ export default function HargaView({ cats, items, onSave, onDelete }: Props) {
         onClose={() => setEditing(null)}
         onSave={async (it, isNew) => { await onSave(it); toast(isNew ? `${it.name} ditambahkan` : `${it.name} diperbarui`); }}
         onDelete={async (it) => { await onDelete(it.id); toast(`${it.name} dihapus`); }}
-      />
+      />}
     </section>
   );
 }
@@ -181,6 +194,7 @@ interface EditorProps {
 
 function ItemEditor({ target, kind, cats, defaultCat, nextSort, onClose, onSave, onDelete }: EditorProps) {
   const toast = useToast();
+  const confirm = useConfirm();
   const it = target && target !== 'new' ? target : null;
   const noun = kind === 'layanan' ? 'layanan' : 'produk';
   const [name, setName] = useState('');
@@ -234,7 +248,11 @@ function ItemEditor({ target, kind, cats, defaultCat, nextSort, onClose, onSave,
   }
 
   async function remove() {
-    if (!it || !window.confirm(`Hapus ${it.name} dari daftar? Riwayat transaksi lama tidak berubah.`)) return;
+    if (!it || !(await confirm({
+      title: `Hapus ${it.name}?`,
+      message: 'Dihapus dari Kasir dan website. Riwayat transaksi lama tidak berubah.',
+      confirmLabel: 'Hapus', danger: true,
+    }))) return;
     setBusy(true);
     try { await onDelete(it); onClose(); }
     catch (err) { toast(`Gagal menghapus: ${(err as Error).message}`, true); }
@@ -257,9 +275,8 @@ function ItemEditor({ target, kind, cats, defaultCat, nextSort, onClose, onSave,
         <div className={`field${cats.length > 1 ? ' row2' : ''}`}>
           {cats.length > 1 && (
             <div><label htmlFor="fCat">Kategori</label>
-              <select className="input" id="fCat" value={catId} onChange={(e) => setCatId(e.target.value)}>
-                {cats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select></div>
+              <Select className="input" id="fCat" value={catId} onChange={setCatId}
+                options={cats.map((c) => ({ value: c.id, label: c.name }))} /></div>
           )}
           <div><label htmlFor="fK">Keterangan <span className="opt">(opsional)</span></label>
             <input className="input" id="fK" placeholder={kind === 'layanan' ? 'Misal: by Gbee' : 'Misal: 60 ml'} value={k} onChange={(e) => setK(e.target.value)} /></div>

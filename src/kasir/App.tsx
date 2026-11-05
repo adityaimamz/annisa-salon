@@ -4,27 +4,29 @@ import {
   deleteItem, loadCatalog, loadProfile, loadTherapists, saveItem, signOut,
 } from './api';
 import HargaView from './HargaView';
+import KaryawanView from './KaryawanView';
 import KasirView from './KasirView';
 import KeuanganView from './KeuanganView';
 import Login from './Login';
 import TransaksiView from './TransaksiView';
 import type { Category, Item, Profile, Therapist } from './types';
-import { Icon, ToastProvider, useToast } from './ui';
+import { ConfirmProvider, Icon, ToastProvider, useToast } from './ui';
 import { supabase, supabaseReady } from '../lib/supabase';
 
-type View = 'kasir' | 'transaksi' | 'keuangan' | 'harga';
+type View = 'kasir' | 'transaksi' | 'keuangan' | 'harga' | 'karyawan';
 const NAV: { id: View; label: string; icon: (s?: number) => React.ReactNode; ownerOnly?: boolean }[] = [
   { id: 'kasir', label: 'Kasir', icon: Icon.kasir },
-  { id: 'transaksi', label: 'Transaksi', icon: Icon.transaksi },
+  { id: 'transaksi', label: 'Transaksi', icon: Icon.transaksi, ownerOnly: true },
   { id: 'keuangan', label: 'Keuangan', icon: Icon.keuangan, ownerOnly: true },
-  { id: 'harga', label: 'Harga', icon: Icon.harga, ownerOnly: true },
+  { id: 'harga', label: 'Harga', icon: Icon.harga },
+  { id: 'karyawan', label: 'Karyawan', icon: Icon.karyawan, ownerOnly: true },
 ];
 
 export default function App() {
   if (!supabaseReady) {
     return <div className="boot">Supabase belum dikonfigurasi. Isi PUBLIC_SUPABASE_URL dan PUBLIC_SUPABASE_PUBLISHABLE_KEY di .env.</div>;
   }
-  return <ToastProvider><Auth /></ToastProvider>;
+  return <ToastProvider><ConfirmProvider><Auth /></ConfirmProvider></ToastProvider>;
 }
 
 function Auth() {
@@ -57,7 +59,7 @@ function Shell({ userId }: { userId: string }) {
     (async () => {
       try {
         const p = await loadProfile(userId);
-        if (!p) throw new Error('Profil akun tidak ditemukan. Hubungi pemilik salon.');
+        if (!p) throw new Error('Akun tidak aktif atau profil tidak ditemukan. Hubungi pemilik salon.');
         const [c, t] = await Promise.all([loadCatalog(), loadTherapists()]);
         setProfile(p); setCats(c.cats); setItems(c.items); setTherapists(t);
         setReady(true);
@@ -86,7 +88,8 @@ function Shell({ userId }: { userId: string }) {
   }
   if (!ready || !profile) return <div className="boot">Memuat data…</div>;
 
-  const nav = NAV.filter((n) => !n.ownerOnly || profile.role === 'owner');
+  const isOwner = profile.role === 'owner';
+  const nav = NAV.filter((n) => !n.ownerOnly || isOwner);
   const current = nav.some((n) => n.id === view) ? view : 'kasir';
   const logout = async () => { try { await signOut(); } catch (e) { toast((e as Error).message, true); } };
 
@@ -109,7 +112,7 @@ function Shell({ userId }: { userId: string }) {
           <a className="navi" href="/">{Icon.back(18)}Kembali ke website</a>
           <div className="who">
             <span className="avatar" aria-hidden="true">{profile.name.trim().charAt(0).toUpperCase()}</span>
-            <span className="who-text"><b>{profile.name}</b>{profile.role === 'owner' ? 'Pemilik' : 'Kasir'}</span>
+            <span className="who-text"><b>{profile.name}</b>{isOwner ? 'Pemilik' : 'Karyawan'}</span>
             <button className="logout" type="button" onClick={logout}>Keluar</button>
           </div>
         </div>
@@ -124,7 +127,8 @@ function Shell({ userId }: { userId: string }) {
         </div>
         {current === 'transaksi' && <TransaksiView refreshKey={refreshKey} />}
         {current === 'keuangan' && <KeuanganView cats={cats} refreshKey={refreshKey} />}
-        {current === 'harga' && <HargaView cats={cats} items={items} onSave={save} onDelete={remove} />}
+        {current === 'harga' && <HargaView cats={cats} items={items} onSave={save} onDelete={remove} readOnly={!isOwner} />}
+        {current === 'karyawan' && <KaryawanView />}
       </main>
 
       <nav className="tabbar" aria-label="Menu aplikasi" style={{ gridTemplateColumns: `repeat(${nav.length}, 1fr)` }}>

@@ -8,6 +8,15 @@ export interface Profile {
   role: Role;
 }
 
+export interface StaffMember {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  active: boolean;
+  createdAt: number;
+}
+
 export interface Category {
   id: string;
   name: string;

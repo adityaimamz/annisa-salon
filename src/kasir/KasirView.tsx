@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { createTransaction } from './api';
 import { money, num, rp, rpk } from './format';
 import type { CartLine, Category, Item, PayMethod, Profile, Therapist, Tx } from './types';
-import { CloseBtn, Icon, ReceiptSheet, Sheet, useToast } from './ui';
+import { CloseBtn, Icon, ReceiptSheet, Select, Sheet, useToast } from './ui';
 
 const priceLabel = (it: Item) => {
   if (it.price) return rp(it.price);
@@ -173,11 +173,10 @@ export default function KasirView({ cats, items, therapists, profile, onPaid }: 
                 </div>
                 <div className="line-bot">
                   {l.service ? (
-                    <select className={`terapis ${l.terapis ? '' : 'empty'}`} aria-label={`Terapis untuk ${l.name}`} value={l.terapis}
-                      onChange={(e) => setCart((c) => c.map((x, idx) => (idx === i ? { ...x, terapis: e.target.value } : x)))}>
-                      <option value="">Pilih terapis</option>
-                      {therapists.map((t) => <option key={t.id} value={String(t.id)}>{t.name}</option>)}
-                    </select>
+                    <Select className={`terapis ${l.terapis ? '' : 'empty'}`} ariaLabel={`Terapis untuk ${l.name}`} value={l.terapis}
+                      placeholder="Pilih terapis"
+                      onChange={(v) => setCart((c) => c.map((x, idx) => (idx === i ? { ...x, terapis: v } : x)))}
+                      options={therapists.map((t) => ({ value: String(t.id), label: t.name }))} />
                   ) : <span className="v">Produk</span>}
                   <span className="mini-step">
                     <button type="button" aria-label="Kurangi" onClick={() => step(i, -1)}>−</button>

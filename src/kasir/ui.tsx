@@ -1,5 +1,5 @@
 import {
-  createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode,
+  createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode,
 } from 'react';
 import { fmtDay, fmtTime, rp } from './format';
 import type { Tx } from './types';
@@ -34,6 +34,7 @@ export const Icon = {
   transaksi: (s = 18) => svg(<><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3z" /><path d="M9 8h6M9 12h6" /></>, s),
   keuangan: (s = 18) => svg(<path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />, s),
   harga: (s = 18) => svg(<><path d="M3 12V4h8l10 10-8 8L3 12z" /><circle cx="7.5" cy="8.5" r="1.5" /></>, s),
+  karyawan: (s = 18) => svg(<><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.4c2.2.7 3.5 2.6 3.5 5.6" /></>, s),
   back: (s = 18) => svg(<path d="M19 12H5M11 6l-6 6 6 6" />, s),
   search: () => svg(<><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></>),
   close: () => svg(<path d="M6 6l12 12M18 6L6 18" />, 16),
@@ -76,6 +77,185 @@ export function Sheet({
     >
       {(open || closing) && last.current}
     </dialog>
+  );
+}
+
+/* ---------- konfirmasi (pengganti window.confirm) ---------- */
+interface ConfirmOpts { title: string; message: ReactNode; confirmLabel?: string; danger?: boolean }
+type ConfirmFn = (o: ConfirmOpts) => Promise<boolean>;
+const ConfirmCtx = createContext<ConfirmFn>(() => Promise.resolve(false));
+export const useConfirm = () => useContext(ConfirmCtx);
+
+export function ConfirmProvider({ children }: { children: ReactNode }) {
+  const [opts, setOpts] = useState<ConfirmOpts | null>(null);
+  const resolver = useRef<((v: boolean) => void) | null>(null);
+  const ask = useCallback<ConfirmFn>((o) => new Promise<boolean>((res) => {
+    resolver.current?.(false);
+    resolver.current = res;
+    setOpts(o);
+  }), []);
+  const done = (v: boolean) => {
+    resolver.current?.(v);
+    resolver.current = null;
+    setOpts(null);
+  };
+  return (
+    <ConfirmCtx.Provider value={ask}>
+      {children}
+      <Sheet open={!!opts} onClose={() => done(false)} labelledBy="confirmTitle">
+        {opts && (
+          <div className="sheet-in confirm" role="alertdialog" aria-describedby="confirmMsg">
+            <h3 id="confirmTitle">{opts.title}</h3>
+            <p id="confirmMsg" className="confirm-msg">{opts.message}</p>
+            <div className="sheet-actions eq">
+              <button className="btn btn-line" type="button" onClick={() => done(false)}>Batal</button>
+              <button className={`btn ${opts.danger ? 'btn-red' : 'btn-green'}`} type="button" onClick={() => done(true)}>
+                {opts.confirmLabel ?? 'Ya'}
+              </button>
+            </div>
+          </div>
+        )}
+      </Sheet>
+    </ConfirmCtx.Provider>
+  );
+}
+
+/* ---------- dropdown ---------- */
+export interface SelectOption { value: string; label: string }
+interface SelectPos { left: number; width: number; top?: number; bottom?: number; maxH: number; up: boolean }
+
+export function Select({
+  value, onChange, options, placeholder = 'Pilih', id, className = '', ariaLabel,
+}: {
+  value: string; onChange: (v: string) => void; options: SelectOption[]; placeholder?: string;
+  id?: string; className?: string; ariaLabel?: string;
+}) {
+  const btn = useRef<HTMLButtonElement>(null);
+  const list = useRef<HTMLUListElement>(null);
+  const uid = useId();
+  const [open, setOpen] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const [active, setActive] = useState(0);
+  const [pos, setPos] = useState<SelectPos>({ left: 0, width: 0, maxH: 280, up: false });
+  const sel = options.findIndex((o) => o.value === value);
+  const shown = open || closing;
+
+  const place = () => {
+    const r = btn.current!.getBoundingClientRect();
+    const below = window.innerHeight - r.bottom - 14;
+    const above = r.top - 14;
+    const need = Math.min(options.length * 40 + 10, 280);
+    const up = below < need && above > below;
+    const width = Math.max(r.width, 180);
+    setPos({
+      left: Math.max(8, Math.min(r.left, window.innerWidth - width - 8)), width, up,
+      top: up ? undefined : r.bottom + 6,
+      bottom: up ? window.innerHeight - r.top + 6 : undefined,
+      maxH: Math.max(120, Math.min(280, up ? above : below)),
+    });
+  };
+
+  const openList = () => {
+    place();
+    setActive(sel >= 0 ? sel : 0);
+    setClosing(false);
+    setOpen(true);
+  };
+  const closeList = useCallback(() => {
+    setOpen(false);
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    setClosing(true);
+  }, []);
+
+  // animasi keluar: biarkan 100ms, lalu lepas dari top layer
+  useEffect(() => {
+    if (!closing) return;
+    const t = window.setTimeout(() => setClosing(false), 100);
+    return () => window.clearTimeout(t);
+  }, [closing]);
+
+  // popover (top layer) supaya tidak terpotong dialog/keranjang
+  useLayoutEffect(() => {
+    const el = list.current;
+    if (!el) return;
+    if (shown && !el.matches(':popover-open')) el.showPopover();
+    return () => { if (el.matches(':popover-open')) el.hidePopover(); };
+  }, [shown]);
+
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: PointerEvent) => {
+      const t = e.target as Node;
+      if (!btn.current?.contains(t) && !list.current?.contains(t)) closeList();
+    };
+    const scroll = (e: Event) => { if (!list.current?.contains(e.target as Node)) closeList(); };
+    document.addEventListener('pointerdown', away);
+    window.addEventListener('resize', closeList);
+    window.addEventListener('scroll', scroll, true);
+    return () => {
+      document.removeEventListener('pointerdown', away);
+      window.removeEventListener('resize', closeList);
+      window.removeEventListener('scroll', scroll, true);
+    };
+  }, [open, closeList]);
+
+  useEffect(() => {
+    if (open) (list.current?.children[active] as HTMLElement | undefined)?.scrollIntoView({ block: 'nearest' });
+  }, [open, active]);
+
+  const pick = (i: number) => {
+    const o = options[i];
+    if (o) onChange(o.value);
+    closeList();
+    btn.current?.focus();
+  };
+
+  function onKey(e: React.KeyboardEvent) {
+    const n = options.length;
+    if (!open) {
+      if (['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(e.key)) { e.preventDefault(); openList(); }
+      return;
+    }
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeList(); }
+    else if (e.key === 'ArrowDown') { e.preventDefault(); setActive((a) => (a + 1) % n); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setActive((a) => (a - 1 + n) % n); }
+    else if (e.key === 'Home') { e.preventDefault(); setActive(0); }
+    else if (e.key === 'End') { e.preventDefault(); setActive(n - 1); }
+    else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(active); }
+    else if (e.key === 'Tab') closeList();
+  }
+
+  return (
+    <>
+      <button
+        ref={btn} id={id} type="button" role="combobox"
+        className={`select ${className}`}
+        aria-label={ariaLabel} aria-haspopup="listbox" aria-expanded={open} aria-controls={`${uid}-list`}
+        aria-activedescendant={open ? `${uid}-${active}` : undefined}
+        onClick={() => (open ? closeList() : openList())} onKeyDown={onKey}
+      >
+        <span className={`sel-val${sel < 0 ? ' ph' : ''}`}>{sel >= 0 ? options[sel].label : placeholder}</span>
+        <svg width="12" height="8" viewBox="0 0 12 8" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M1 1.5l5 5 5-5" /></svg>
+      </button>
+      {shown && (
+        <ul
+          ref={list} id={`${uid}-list`} role="listbox" popover="manual"
+          className={`sel-list${pos.up ? ' up' : ''}`} data-closing={!open || undefined}
+          style={{ left: pos.left, width: pos.width, top: pos.top, bottom: pos.bottom, maxHeight: pos.maxH }}
+        >
+          {options.map((o, i) => (
+            <li
+              key={o.value} id={`${uid}-${i}`} role="option" className="sel-opt"
+              aria-selected={i === sel} data-active={i === active || undefined}
+              onPointerMove={() => setActive(i)} onClick={() => pick(i)}
+            >
+              <span>{o.label}</span>
+              {i === sel && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true"><path d="M5 12l5 5 9-10" /></svg>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
   );
 }
 

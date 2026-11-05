@@ -6,7 +6,7 @@ Astro (static) + React island untuk kasir + Supabase.
 |---|---|
 | `/` | Landing page |
 | `/produk` | Katalog Gbee, harga dibaca langsung dari Supabase |
-| `/kasir` | Kasir, transaksi, keuangan (owner), harga (owner). Perlu login |
+| `/kasir` | Kasir + Harga (hanya lihat) untuk karyawan; Transaksi, Keuangan, ubah Harga, dan Karyawan khusus owner. Perlu login |
 
 ## Menjalankan
 ```
@@ -22,7 +22,7 @@ npm run db:login && npm run db:link   # sekali saja
 npm run db:dry                        # lihat migrasi yang akan jalan
 npm run db:push                       # terapkan
 ```
-Akun baru otomatis berperan `kasir`. Jadikan pemilik:
+Akun baru otomatis berperan `kasir` (= karyawan). Owner membuat akun karyawan dari menu **Karyawan** di `/kasir` (RPC `create_staff`, migrasi `0007`). Jadikan pemilik:
 `update public.profiles set role = 'owner' where id = '<UUID user>';`
 
 ## Deploy (Vercel)
