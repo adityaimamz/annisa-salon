@@ -241,7 +241,7 @@ const jsonLd = {
       <p class="kicker">Produk</p>
       <h2 class="h2">Bawa pulang<br>skincare-nya.</h2>
       <p class="sub">Kami juga jual skincare Gbee Glow Beauty, seri yang sama dengan Facial Glow Beauty di salon. Ada day &amp; night cream, facial wash, toner, jelly face, sampai produk untuk pria.</p>
-      <p class="from">Mulai dari <b>Rp40.000</b> · 22 produk</p>
+      <p class="from">Mulai dari <b id="shopFrom">Rp40.000</b> · <span id="shopCount">22</span> produk</p>
       <a class="btn btn-green" href="/produk">Lihat semua produk →</a>
     </div>
     <div class="shop-imgs" data-reveal>
@@ -392,6 +392,8 @@ const jsonLd = {
 </dialog>
 
 <script>
+import { supabase } from '../lib/supabase';
+
 (() => {
   const WA = '6285728958582';
   const waLink = (text) => `https://wa.me/${WA}?text=${encodeURIComponent(text)}`;
@@ -441,6 +443,19 @@ const jsonLd = {
     });
   }, { rootMargin: '0px 0px -8% 0px', threshold: 0.12 });
   document.querySelectorAll('[data-reveal]').forEach((el) => io.observe(el));
+
+  // Teaser produk: jumlah & harga terendah ikut katalog (aktif/nonaktif & harga dari tab Harga di dashboard).
+  // Teks bawaan di HTML tetap jadi cadangan kalau fetch gagal.
+  (async () => {
+    if (!supabase) return;
+    const { data, error } = await supabase
+      .from('catalog_items').select('price,web_price')
+      .eq('category_id', 'produk').eq('active', true).not('price', 'is', null);
+    if (error || !data?.length) return;
+    const min = Math.min(...data.map((r) => (r.web_price ?? r.price) as number));
+    document.getElementById('shopFrom')!.textContent = 'Rp' + min.toLocaleString('id-ID');
+    document.getElementById('shopCount')!.textContent = String(data.length);
+  })();
 
   // Gallery filter
   const tabs = document.querySelectorAll('.tab');

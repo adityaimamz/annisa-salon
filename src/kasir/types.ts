@@ -19,7 +19,8 @@ export interface Item {
   name: string;
   k?: string;
   service: boolean;
-  price?: number;
+  price?: number; // harga kasir
+  webPrice?: number; // harga di website (landing & /produk); kosong = ikut harga kasir
   vlabel?: string;
   variants?: Variant[];
   opts?: string[];

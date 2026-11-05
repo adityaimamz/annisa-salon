@@ -36,10 +36,13 @@ export default function HargaView({ cats, items, onSave, onDelete }: Props) {
     return run(onSave(next), `Harga ${it.name}${vi >= 0 ? ' · ' + it.variants![vi][0] : ''} jadi ${rp(v)}`);
   };
 
+  const setWebPrice = (it: Item, v: number) =>
+    run(onSave({ ...it, webPrice: v }), `Harga website ${it.name} jadi ${rp(v)}`);
+
   return (
     <section className="view" aria-label="Harga">
       <div className="v-head">
-        <div><h1>Harga</h1><p className="meta">{nSvc} layanan · {items.length - nSvc} produk · perubahan langsung dipakai di Kasir</p></div>
+        <div><h1>Harga</h1><p className="meta">{nSvc} layanan · {items.length - nSvc} produk · harga Kasir langsung dipakai di Kasir · harga produk untuk website diatur terpisah</p></div>
         <button className="btn btn-green btn-sm" type="button" onClick={() => setEditing('new')}>+ Tambah item</button>
       </div>
       <div className="pad">
@@ -85,6 +88,15 @@ export default function HargaView({ cats, items, onSave, onDelete }: Props) {
                     </label>
                     <button className="icon-btn" type="button" aria-label={`Ubah ${it.name}`} onClick={() => setEditing(it)}>{Icon.edit()}</button>
                   </div>
+                  {it.cat === 'produk' && !it.variants && (
+                    <div className="pr-vars">
+                      <div className="pr-var">
+                        <span>Harga di website <small style={{ color: 'var(--ink-3)' }}>· landing &amp; halaman Produk</small></span>
+                        <MoneyInput value={it.webPrice ?? it.price ?? 0} label={`${it.name} di website`} sample={false} onCommit={(v) => setWebPrice(it, v)} />
+                        <span className="sp" /><span className="sp" />
+                      </div>
+                    </div>
+                  )}
                   {it.variants && (
                     <div className="pr-vars">
                       {it.variants.map((v, i) => (
@@ -156,6 +168,7 @@ function ItemEditor({ target, cats, defaultCat, nextSort, onClose, onSave, onDel
   const [k, setK] = useState('');
   const [mode, setMode] = useState<'single' | 'multi'>('single');
   const [price, setPrice] = useState('');
+  const [webPrice, setWebPrice] = useState('');
   const [vlabel, setVlabel] = useState('');
   const [vars, setVars] = useState<[string, string][]>([['', ''], ['', '']]);
   const [errs, setErrs] = useState({ name: false, price: false, vars: false });
@@ -165,6 +178,7 @@ function ItemEditor({ target, cats, defaultCat, nextSort, onClose, onSave, onDel
     if (!target) return;
     setName(it?.name ?? ''); setCatId(it?.cat ?? defaultCat); setK(it?.k ?? '');
     setMode(it?.variants ? 'multi' : 'single'); setPrice(it?.price ? money(it.price) : '');
+    setWebPrice(it?.webPrice ? money(it.webPrice) : '');
     setVlabel(it?.vlabel ?? '');
     setVars(it?.variants ? it.variants.map(([n, p]) => [n, money(p)]) : [['', ''], ['', '']]);
     setErrs({ name: false, price: false, vars: false });
@@ -189,7 +203,7 @@ function ItemEditor({ target, cats, defaultCat, nextSort, onClose, onSave, onDel
       sample: false, off: it?.off ?? false, sort: it?.sort ?? nextSort,
     };
     const next: Item = mode === 'single'
-      ? { ...base, price: p }
+      ? { ...base, price: p, webPrice: catId === 'produk' && num(webPrice) ? num(webPrice) : undefined }
       : { ...base, variants: vs, vlabel: vlabel.trim() || 'Pilihan', opts: it?.opts };
     setBusy(true);
     try { await onSave(next, !it); onClose(); }
@@ -239,7 +253,15 @@ function ItemEditor({ target, cats, defaultCat, nextSort, onClose, onSave, onDel
               <input className="input" inputMode="numeric" placeholder="0" aria-label="Harga" value={price} onChange={(e) => setPrice(money(num(e.target.value)))} /></label>
             {errs.price && <p className="field-err">Isi harga.</p>}
           </div>
-        ) : (
+        ) : null}
+        {mode === 'single' && catId === 'produk' ? (
+          <div className="field">
+            <label htmlFor="fWeb">Harga di website <span className="opt">(kosong = ikut harga kasir)</span></label>
+            <label className="money"><span>Rp</span>
+              <input className="input" id="fWeb" inputMode="numeric" placeholder="0" value={webPrice} onChange={(e) => setWebPrice(money(num(e.target.value)))} /></label>
+          </div>
+        ) : null}
+        {mode === 'single' ? null : (
           <div className="field">
             <label htmlFor="fVlabel">Nama pilihan</label>
             <input className="input" id="fVlabel" placeholder="Misal: Panjang rambut" style={{ marginBottom: 10 }} value={vlabel} onChange={(e) => setVlabel(e.target.value)} />

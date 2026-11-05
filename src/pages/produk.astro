@@ -226,7 +226,7 @@ import '../styles/site.css';
     if (!supabase) throw new Error('Supabase belum dikonfigurasi');
     const { data, error } = await supabase
       .from('catalog_items')
-      .select('id,name,note,price,series,sort')
+      .select('id,name,note,price,web_price,series,sort')
       .eq('category_id', 'produk')
       .eq('active', true)
       .not('price', 'is', null)
@@ -239,7 +239,7 @@ import '../styles/site.css';
       const seriesName = r.series || 'Lainnya';
       const sid = slug(seriesName);
       if (!order.some((s) => s.id === sid)) order.push({ id: sid, name: seriesName });
-      PRODUCTS[r.id] = { id: r.id, name: r.name, size: r.note ?? '', price: r.price, series: sid };
+      PRODUCTS[r.id] = { id: r.id, name: r.name, size: r.note ?? '', price: r.web_price ?? r.price, series: sid };
     }
     SERIES = order;
     Object.keys(cart).forEach((k) => { if (!PRODUCTS[k] || cart[k] < 1) delete cart[k]; });
