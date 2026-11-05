@@ -1,0 +1,49 @@
+---
+interface Props {
+  title: string;
+  description?: string;
+  ogImage?: string;
+  ogTitle?: string;
+  ogDescription?: string;
+  noindex?: boolean;
+  themeColor?: string;
+  jsonLd?: Record<string, unknown>;
+}
+const {
+  title,
+  description,
+  ogImage,
+  ogTitle,
+  ogDescription,
+  noindex = false,
+  themeColor = '#1D4D3A',
+  jsonLd,
+} = Astro.props;
+const ogImageUrl = ogImage && Astro.site ? new URL(ogImage, Astro.site).href : ogImage;
+---
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>{title}</title>
+    {description && <meta name="description" content={description} />}
+    <meta name="theme-color" content={themeColor} />
+    {noindex && <meta name="robots" content="noindex" />}
+    {ogTitle && <meta property="og:title" content={ogTitle} />}
+    {ogDescription && <meta property="og:description" content={ogDescription} />}
+    {ogImageUrl && <meta property="og:image" content={ogImageUrl} />}
+    <link rel="icon" type="image/png" href="/assets/mark.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Gloock&family=Onest:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />}
+    <slot name="head" />
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>

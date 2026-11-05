@@ -1,0 +1,255 @@
+---
+import Base from '../layouts/Base.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import SiteFooter from '../components/SiteFooter.astro';
+import '../styles/site.css';
+---
+<Base
+  title="Skincare Gbee Glow Beauty · An-Nisa Muslimah Salon Tegal"
+  description="Beli skincare Gbee Glow Beauty di An-Nisa Muslimah Salon Tegal: day & night cream, facial wash, toner, jelly face, cleansing milk, dan green mask. Pesan lewat WhatsApp, ambil di salon."
+>
+<SiteHeader current="produk" />
+
+<main>
+  <section class="p-hero">
+    <div class="wrap">
+      <p class="kicker">Produk · Gbee Glow Beauty</p>
+      <h1>Skincare yang dipakai di facial kami.</h1>
+      <p class="lead">Seri Gbee yang sama dengan Facial Glow Beauty di salon, sekarang bisa dibawa pulang. Pilih produknya, lalu kirim pesanan lewat WhatsApp. Stok dan pengambilan kami konfirmasi di chat.</p>
+      <div class="p-strip" aria-hidden="true">
+        <img src="/assets/produk/krim-pink-gold.webp" alt="" width="142" height="142" />
+        <img src="/assets/produk/krim-set.webp" alt="" width="142" height="142" />
+        <img src="/assets/produk/serum-gold.webp" alt="" width="142" height="142" />
+        <img src="/assets/produk/rice-jelly.webp" alt="" width="142" height="142" />
+        <img src="/assets/produk/lotion.webp" alt="" width="124" height="124" />
+      </div>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top:48px">
+    <div class="wrap">
+      <div class="p-tabs">
+        <div class="tabs" role="group" aria-label="Pilih seri" id="ptabs"></div>
+      </div>
+      <div id="catalog" aria-live="polite"><p class="c-empty">Memuat daftar produk…</p></div>
+      <p class="p-foot-note">Harga sesuai pricelist Gbee Glow Beauty per 1 Mei 2026.</p>
+    </div>
+  </section>
+</main>
+
+<SiteFooter />
+
+<div class="cartbar" id="cartbar">
+  <div class="inner">
+    <div class="sum"><span id="cbCount">0 produk</span><b id="cbTotal">Rp0</b></div>
+    <button class="btn btn-green" id="openCart" type="button">Lihat keranjang</button>
+  </div>
+</div>
+
+<dialog class="drawer" id="drawer" aria-labelledby="drawerTitle">
+  <div class="drawer-in">
+    <div class="drawer-head">
+      <h2 id="drawerTitle">Keranjang</h2>
+      <button class="x" id="closeCart" type="button" aria-label="Tutup keranjang">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="drawer-body">
+      <div id="cartItems"></div>
+      <form class="c-form" id="orderForm" novalidate>
+        <div class="field">
+          <label for="oNama">Nama</label>
+          <input class="input" id="oNama" autocomplete="given-name" placeholder="Nama untuk pesanan" />
+        </div>
+        <div class="field">
+          <span class="label">Pengambilan</span>
+          <div class="chips">
+            <label class="chip"><input type="radio" name="ambil" value="Ambil di salon" checked /><span>Ambil di salon</span></label>
+            <label class="chip"><input type="radio" name="ambil" value="Minta dikirim (mohon info ongkir)" /><span>Minta dikirim</span></label>
+          </div>
+        </div>
+        <div class="field">
+          <label for="oCatatan">Catatan <span class="opt">(opsional)</span></label>
+          <textarea class="input" id="oCatatan" placeholder="Misal: alamat kirim, atau mau diambil sekalian facial hari Sabtu"></textarea>
+        </div>
+      </form>
+    </div>
+    <div class="drawer-foot">
+      <div class="total"><span>Total</span><b id="dTotal">Rp0</b></div>
+      <button class="btn btn-green" id="sendOrder" type="button">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.87.5 3.62 1.44 5.13L2 22l5.13-1.55a9.85 9.85 0 0 0 4.9 1.31h.01c5.46 0 9.91-4.45 9.91-9.91S17.5 2 12.04 2z"/></svg>
+        Pesan lewat WhatsApp
+      </button>
+      <small>Belum ada pembayaran di sini. Total dan stok dikonfirmasi admin di WhatsApp.</small>
+    </div>
+  </div>
+</dialog>
+
+<script>
+  import { supabase } from '../lib/supabase';
+
+  const WA = '6285728958582';
+  const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+  const rp = (n: number) => 'Rp' + n.toLocaleString('id-ID');
+  const esc = (s: string) =>
+    s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+  const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+  interface Product { id: string; name: string; size: string; price: number; series: string }
+  interface Series { id: string; name: string }
+
+  let PRODUCTS: Record<string, Product> = {};
+  let SERIES: Series[] = [];
+  let cart: Record<string, number> = {};
+  try { cart = JSON.parse(localStorage.getItem('annisa-cart') || '{}'); } catch { /* abaikan */ }
+  const save = () => localStorage.setItem('annisa-cart', JSON.stringify(cart));
+
+  const catalog = $('catalog');
+  const tabs = $('ptabs');
+  const cartbar = $('cartbar');
+  const drawer = $<HTMLDialogElement>('drawer');
+
+  const stepper = (id: string, qty: number, label: string) => `
+    <span class="stepper" role="group" aria-label="Jumlah ${esc(label)}">
+      <button type="button" data-dec="${id}" aria-label="Kurangi">−</button>
+      <span aria-live="polite">${qty}</span>
+      <button type="button" data-inc="${id}" aria-label="Tambah">+</button>
+    </span>`;
+
+  function renderCatalog() {
+    catalog.innerHTML = SERIES.map((s) => {
+      const items = Object.values(PRODUCTS).filter((p) => p.series === s.id);
+      return `
+      <section class="p-group" data-s="${s.id}" aria-labelledby="g-${s.id}">
+        <h2 id="g-${s.id}">${esc(s.name)}<small>${items.length} produk</small></h2>
+        <ul class="p-list">
+          ${items.map((p) => `
+            <li class="p-item">
+              <span class="p-name">${esc(p.name)}</span>
+              <span class="p-meta"><span class="p-size">${esc(p.size)}</span><span class="p-price">${rp(p.price)}</span></span>
+              <span class="p-act" data-id="${p.id}"></span>
+            </li>`).join('')}
+        </ul>
+      </section>`;
+    }).join('');
+    tabs.innerHTML =
+      `<button class="tab" data-f="all" aria-pressed="true">Semua</button>` +
+      SERIES.map((s) => `<button class="tab" data-f="${s.id}" aria-pressed="false">${esc(s.name)}</button>`).join('');
+  }
+
+  tabs.addEventListener('click', (e) => {
+    const t = (e.target as HTMLElement).closest<HTMLElement>('.tab');
+    if (!t) return;
+    tabs.querySelectorAll('.tab').forEach((x) => x.setAttribute('aria-pressed', String(x === t)));
+    document.querySelectorAll<HTMLElement>('.p-group').forEach((g) => {
+      g.hidden = !(t.dataset.f === 'all' || g.dataset.s === t.dataset.f);
+    });
+  });
+
+  function renderActions() {
+    document.querySelectorAll<HTMLElement>('.p-act').forEach((el) => {
+      const p = PRODUCTS[el.dataset.id!];
+      if (!p) return;
+      const q = cart[p.id] || 0;
+      el.innerHTML = q
+        ? stepper(p.id, q, p.name)
+        : `<button class="add" type="button" data-inc="${p.id}">+ Keranjang</button>`;
+    });
+  }
+
+  const totals = () =>
+    Object.entries(cart).reduce(
+      (a, [id, q]) => ({ count: a.count + q, sum: a.sum + (PRODUCTS[id]?.price ?? 0) * q }),
+      { count: 0, sum: 0 },
+    );
+
+  function renderCart() {
+    const { count, sum } = totals();
+    $('cbCount').textContent = `${count} produk`;
+    $('cbTotal').textContent = rp(sum);
+    $('dTotal').textContent = rp(sum);
+    cartbar.classList.toggle('show', count > 0);
+    document.body.classList.toggle('has-cart', count > 0);
+    const ids = Object.keys(cart);
+    $('cartItems').innerHTML = ids.length
+      ? ids.map((id) => {
+          const p = PRODUCTS[id], q = cart[id];
+          return `<div class="c-item">
+            <span class="p-name">${esc(p.name)} <span style="font-weight:400;color:var(--ink-3)">${esc(p.size)}</span></span>
+            ${stepper(id, q, p.name)}
+            <span class="sub2">${q} × ${rp(p.price)} = ${rp(q * p.price)}</span>
+          </div>`;
+        }).join('')
+      : `<p class="c-empty">Keranjang masih kosong.</p>`;
+    ($('sendOrder') as HTMLButtonElement).disabled = !ids.length;
+  }
+
+  function change(id: string, d: number) {
+    cart[id] = (cart[id] || 0) + d;
+    if (cart[id] < 1) delete cart[id];
+    save(); renderActions(); renderCart();
+  }
+  document.addEventListener('click', (e) => {
+    const t = e.target as HTMLElement;
+    const inc = t.closest<HTMLElement>('[data-inc]'); if (inc) return change(inc.dataset.inc!, 1);
+    const dec = t.closest<HTMLElement>('[data-dec]'); if (dec) return change(dec.dataset.dec!, -1);
+  });
+
+  $('openCart').onclick = () => drawer.showModal();
+  $('closeCart').onclick = () => drawer.close();
+  drawer.addEventListener('click', (e) => { if (e.target === drawer) drawer.close(); });
+
+  $('sendOrder').onclick = () => {
+    const nama = $<HTMLInputElement>('oNama');
+    if (!nama.value.trim()) { nama.focus(); nama.placeholder = 'Isi nama dulu ya'; return; }
+    const { sum } = totals();
+    const lines = [
+      'Assalamualaikum kak, saya mau pesan produk Gbee di An-Nisa Muslimah Salon.',
+      '',
+      ...Object.entries(cart).map(([id, q]) => `• ${q}x ${PRODUCTS[id].name} ${PRODUCTS[id].size} = ${rp(q * PRODUCTS[id].price)}`),
+      '',
+      `Total: ${rp(sum)}`,
+      `Nama: ${nama.value.trim()}`,
+      `Pengambilan: ${(document.querySelector('input[name="ambil"]:checked') as HTMLInputElement).value}`,
+    ];
+    const cat = $<HTMLTextAreaElement>('oCatatan').value.trim();
+    if (cat) lines.push(`Catatan: ${cat}`);
+    window.open(`https://wa.me/${WA}?text=${encodeURIComponent(lines.join('\n'))}`, '_blank', 'noopener');
+  };
+
+  const head = $('head');
+  addEventListener('scroll', () => head.classList.toggle('scrolled', scrollY > 8), { passive: true });
+  $('yr').textContent = String(new Date().getFullYear());
+
+  // ---------- muat produk dari Supabase ----------
+  async function load() {
+    if (!supabase) throw new Error('Supabase belum dikonfigurasi');
+    const { data, error } = await supabase
+      .from('catalog_items')
+      .select('id,name,note,price,series,sort')
+      .eq('category_id', 'produk')
+      .eq('active', true)
+      .not('price', 'is', null)
+      .order('sort');
+    if (error) throw error;
+
+    const order: Series[] = [];
+    PRODUCTS = {};
+    for (const r of data ?? []) {
+      const seriesName = r.series || 'Lainnya';
+      const sid = slug(seriesName);
+      if (!order.some((s) => s.id === sid)) order.push({ id: sid, name: seriesName });
+      PRODUCTS[r.id] = { id: r.id, name: r.name, size: r.note ?? '', price: r.price, series: sid };
+    }
+    SERIES = order;
+    Object.keys(cart).forEach((k) => { if (!PRODUCTS[k] || cart[k] < 1) delete cart[k]; });
+    renderCatalog(); renderActions(); renderCart();
+  }
+
+  renderCart();
+  load().catch(() => {
+    catalog.innerHTML = `<p class="c-empty">Daftar produk belum bisa dimuat. Coba muat ulang halaman, atau
+      <a href="https://wa.me/${WA}?text=${encodeURIComponent('Assalamualaikum kak, mau tanya daftar produk Gbee.')}" target="_blank" rel="noopener">tanya lewat WhatsApp</a>.</p>`;
+  });
+</script>
+</Base>

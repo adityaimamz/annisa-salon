@@ -1,0 +1,29 @@
+---
+interface Props {
+  home?: boolean;
+  current?: 'produk';
+}
+const { home = false, current } = Astro.props;
+const root = home ? '' : '/';
+---
+<header class="site-head" id="head">
+  <div class="wrap head-row">
+    <a
+      href={home ? '#top' : '/'}
+      class="brand"
+      aria-label={home ? 'An-Nisa Muslimah Salon, ke atas' : 'An-Nisa Muslimah Salon, halaman depan'}
+    >
+      <img src="/assets/mark.png" alt="" width="30" height="34" />
+      <span class="brand-name">An-Nisa<small>Muslimah Salon · Tegal</small></span>
+    </a>
+    <nav class="nav" aria-label="Navigasi utama">
+      <a href={`${root}#hasil`}>Hasil</a>
+      <a href={`${root}#layanan`}>Layanan</a>
+      <a class="nav-shop" href="/produk" aria-current={current === 'produk' ? 'page' : undefined}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 8h14l-1 12H6L5 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>Produk
+      </a>
+      <a href={`${root}#lokasi`}>Lokasi</a>
+    </nav>
+    <a class="btn btn-green btn-sm head-cta" href={`${root}#booking`}>Booking</a>
+  </div>
+</header>

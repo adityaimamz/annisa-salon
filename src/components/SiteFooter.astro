@@ -1,0 +1,40 @@
+---
+interface Props {
+  home?: boolean;
+}
+const { home = false } = Astro.props;
+const root = home ? '' : '/';
+---
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot-top">
+      <div>
+        <div class="brand">
+          <img src="/assets/mark-light.png" alt="" width="30" height="34" />
+          <span class="brand-name">An-Nisa Muslimah Salon</span>
+        </div>
+        <p style="margin-top:14px;max-width:300px">Salon khusus perempuan di Tegal Selatan. Buka setiap hari, 09.00–19.00.</p>
+      </div>
+      <div>
+        <h4>Halaman</h4>
+        <ul>
+          <li><a href={`${root}#hasil`}>Hasil</a></li>
+          <li><a href={`${root}#layanan`}>Layanan</a></li>
+          <li><a href="/produk">Produk</a></li>
+          <li><a href={`${root}#booking`}>Booking</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Kontak</h4>
+        <ul>
+          <li><a href="https://wa.me/6285728958582" target="_blank" rel="noopener">WhatsApp 0857-2895-8582</a></li>
+          <li><a href="https://maps.app.goo.gl/zMgAMAsnqgPoogeH6" target="_blank" rel="noopener">Google Maps</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© <span id="yr">2026</span> An-Nisa Muslimah Salon</span>
+      <span>Jl. Teuku Umar No.58, Tegal</span>
+    </div>
+  </div>
+</footer>

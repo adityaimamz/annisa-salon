@@ -3,9 +3,9 @@
   "configurations": [
     {
       "name": "salon",
-      "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "5510"],
-      "port": 5510
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 4321
     }
   ]
 }
