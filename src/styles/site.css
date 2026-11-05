@@ -17,6 +17,9 @@
   --sans:'Onest', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --wrap:1200px;
   --gutter:clamp(20px, 4vw, 40px);
+  --ease-out:cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out:cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer:cubic-bezier(0.32, 0.72, 0, 1);
 }
 @media (min-width:880px){:root{--head-h:68px}}
 *,*::before,*::after{box-sizing:border-box}
@@ -35,7 +38,7 @@ a{color:inherit;text-decoration:none}
 button,input,select,textarea{font:inherit;color:inherit}
 ::selection{background:var(--green);color:var(--cream)}
 :focus-visible{outline:2px solid var(--green);outline-offset:3px;border-radius:4px}
-@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 
 .wrap{max-width:var(--wrap);margin:0 auto;padding:0 var(--gutter)}
 .serif{font-family:var(--serif);font-weight:400}
@@ -48,8 +51,9 @@ button,input,select,textarea{font:inherit;color:inherit}
   border-radius:8px;border:1px solid transparent;
   font-weight:600;font-size:15px;letter-spacing:-.005em;
   cursor:pointer;white-space:nowrap;
-  transition:background .2s, color .2s, border-color .2s;
+  transition:background .2s, color .2s, border-color .2s, transform 160ms var(--ease-out);
 }
+.btn:active{transform:scale(.97)}
 .btn svg{flex-shrink:0}
 .btn-green{background:var(--green);color:var(--cream)}
 .btn-green:hover{background:var(--green-hover)}
@@ -171,8 +175,9 @@ button,input,select,textarea{font:inherit;color:inherit}
   flex-shrink:0;height:38px;padding:0 16px;border-radius:999px;
   border:1px solid var(--line-strong);background:transparent;
   font-size:14px;font-weight:500;color:var(--ink-2);cursor:pointer;
-  transition:background .2s,color .2s,border-color .2s;
+  transition:background .2s,color .2s,border-color .2s,transform 160ms var(--ease-out);
 }
+.tab:active{transform:scale(.97)}
 .tab:hover{border-color:var(--ink);color:var(--ink)}
 .tab[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
 .tab .n{opacity:.55;margin-left:4px;font-variant-numeric:tabular-nums}
@@ -190,6 +195,24 @@ button,input,select,textarea{font:inherit;color:inherit}
   width:100vw;height:100vh;margin:0;
 }
 .lb::backdrop{background:rgba(16,22,19,.92)}
+/* buka/tutup: fade + sedikit scale; display & overlay ikut transisi supaya exit terlihat */
+.lb{
+  opacity:0;
+  transition:opacity 200ms var(--ease-out), display 200ms allow-discrete, overlay 200ms allow-discrete;
+}
+.lb[open]{opacity:1}
+.lb::backdrop{
+  background:rgba(16,22,19,0);
+  transition:background-color 200ms var(--ease-out), display 200ms allow-discrete, overlay 200ms allow-discrete;
+}
+.lb[open]::backdrop{background:rgba(16,22,19,.92)}
+.lb-stage{transform:scale(.96);transition:transform 250ms var(--ease-out)}
+.lb[open] .lb-stage{transform:none}
+@starting-style{
+  .lb[open]{opacity:0}
+  .lb[open]::backdrop{background:rgba(16,22,19,0)}
+  .lb[open] .lb-stage{transform:scale(.96)}
+}
 .lb-inner{height:100%;display:grid;grid-template-rows:auto 1fr auto;color:var(--cream)}
 .lb-top{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;font-size:14px}
 .lb-stage{display:flex;align-items:center;justify-content:center;padding:0 12px;min-height:0}
@@ -284,8 +307,9 @@ select.input{appearance:none;-webkit-appearance:none;background-image:url("data:
 .chip span{
   display:inline-flex;align-items:center;height:40px;padding:0 14px;border-radius:999px;
   border:1px solid var(--line-strong);font-size:14.5px;cursor:pointer;user-select:none;
-  transition:background .15s,color .15s,border-color .15s;
+  transition:background .15s,color .15s,border-color .15s,transform 160ms var(--ease-out);
 }
+.chip span:active{transform:scale(.97)}
 .chip span:hover{border-color:var(--ink)}
 .chip input:checked + span{background:var(--green);border-color:var(--green);color:var(--cream)}
 .chip input:focus-visible + span{outline:2px solid var(--green);outline-offset:2px}
@@ -318,7 +342,7 @@ select.input{appearance:none;-webkit-appearance:none;background-image:url("data:
   display:flex;gap:10px;padding:10px 14px calc(10px + env(safe-area-inset-bottom));
   background:rgba(245,242,236,.94);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
   border-top:1px solid var(--line);
-  transform:translateY(110%);transition:transform .3s ease;
+  transform:translateY(110%);transition:transform 300ms var(--ease-out);
 }
 .dock.show{transform:none}
 .dock .btn{height:48px}
@@ -351,10 +375,12 @@ select.input{appearance:none;-webkit-appearance:none;background-image:url("data:
 @media (min-width:700px){.p-meta{display:contents}}
 .p-act{grid-row:1 / span 2;grid-column:2;justify-self:end}
 @media (min-width:700px){.p-act{grid-row:auto;grid-column:auto}}
-.add{height:40px;padding:0 16px;border-radius:999px;border:1px solid var(--green);background:transparent;color:var(--green);font-weight:600;font-size:14px;cursor:pointer;transition:background .15s,color .15s}
+.add{height:40px;padding:0 16px;border-radius:999px;border:1px solid var(--green);background:transparent;color:var(--green);font-weight:600;font-size:14px;cursor:pointer;transition:background .15s,color .15s,transform 160ms var(--ease-out)}
+.add:active{transform:scale(.97)}
 .add:hover{background:var(--green);color:var(--cream)}
 .stepper{display:inline-flex;align-items:center;height:40px;border-radius:999px;background:var(--green);color:var(--cream)}
-.stepper button{width:40px;height:40px;border:0;background:transparent;color:inherit;font-size:18px;cursor:pointer;border-radius:50%}
+.stepper button{width:40px;height:40px;border:0;background:transparent;color:inherit;font-size:18px;cursor:pointer;border-radius:50%;transition:background .15s,transform 160ms var(--ease-out)}
+.stepper button:active{transform:scale(.95)}
 .stepper button:hover{background:rgba(255,255,255,.12)}
 .stepper span{min-width:22px;text-align:center;font-weight:600;font-variant-numeric:tabular-nums}
 .p-foot-note{color:var(--ink-3);font-size:14px;padding:32px 0 0}
@@ -363,7 +389,7 @@ select.input{appearance:none;-webkit-appearance:none;background-image:url("data:
   position:fixed;left:0;right:0;bottom:0;z-index:50;
   padding:10px 14px calc(10px + env(safe-area-inset-bottom));
   background:rgba(245,242,236,.95);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
-  border-top:1px solid var(--line);transform:translateY(110%);transition:transform .3s ease;
+  border-top:1px solid var(--line);transform:translateY(110%);transition:transform 300ms var(--ease-out);
 }
 .cartbar.show{transform:none}
 .cartbar .inner{max-width:var(--wrap);margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:16px}
@@ -372,7 +398,20 @@ select.input{appearance:none;-webkit-appearance:none;background-image:url("data:
 .has-cart .foot{padding-bottom:120px}
 
 .drawer{border:0;padding:0;margin:0 0 0 auto;height:100vh;max-height:100vh;width:min(440px,100vw);background:var(--paper);color:var(--ink)}
-.drawer::backdrop{background:rgba(16,22,19,.5)}
+.drawer{
+  transform:translateX(100%);
+  transition:transform 400ms var(--ease-drawer), display 400ms allow-discrete, overlay 400ms allow-discrete;
+}
+.drawer[open]{transform:none}
+.drawer::backdrop{
+  background:rgba(16,22,19,0);
+  transition:background-color 250ms var(--ease-out), display 400ms allow-discrete, overlay 400ms allow-discrete;
+}
+.drawer[open]::backdrop{background:rgba(16,22,19,.5)}
+@starting-style{
+  .drawer[open]{transform:translateX(100%)}
+  .drawer[open]::backdrop{background:rgba(16,22,19,0)}
+}
 .drawer-in{display:grid;grid-template-rows:auto 1fr auto;height:100%}
 .drawer-head{display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid var(--line)}
 .drawer-head h2{font-family:var(--serif);font-weight:400;font-size:26px}
@@ -402,3 +441,59 @@ select.input{appearance:none;-webkit-appearance:none;background-image:url("data:
 .shop .btn{margin-top:28px}
 .shop .from{margin-top:20px;font-size:15px;color:var(--ink-2)}
 .shop .from b{color:var(--ink)}
+
+/* ================= MOTION ================= */
+
+/* Hero: masuk bertahap saat halaman dibuka (CSS murni, tanpa JS) */
+@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.hero .status,.hero h1,.hero .lead,.hero-ctas,.rail .shot{
+  animation:rise 600ms var(--ease-out) both;
+}
+.hero h1{animation-delay:60ms}
+.hero .lead{animation-delay:140ms}
+.hero-ctas{animation-delay:200ms}
+.rail .shot{animation-duration:700ms;animation-delay:calc(260ms + var(--i,0) * 70ms)}
+.rail .shot:nth-child(2){--i:1}
+.rail .shot:nth-child(3){--i:2}
+.rail .shot:nth-child(4){--i:3}
+.rail .shot:nth-child(5){--i:4}
+
+/* Hero produk */
+.p-hero .kicker,.p-hero h1,.p-hero .lead,.p-strip img{animation:rise 600ms var(--ease-out) both}
+.p-hero h1{animation-delay:60ms}
+.p-hero .lead{animation-delay:140ms}
+.p-strip img{animation-duration:700ms;animation-delay:calc(200ms + var(--i,0) * 70ms)}
+.p-strip img:nth-child(2){--i:1}
+.p-strip img:nth-child(3){--i:2}
+.p-strip img:nth-child(4){--i:3}
+.p-strip img:nth-child(5){--i:4}
+
+/* Status "buka sekarang": cincin berdenyut pelan */
+.status .dot{position:relative}
+.status.open .dot::after{
+  content:"";position:absolute;inset:0;border-radius:50%;background:#2E9D5B;
+  animation:ping 2.4s var(--ease-out) infinite;
+}
+@keyframes ping{0%{transform:scale(1);opacity:.45}70%,100%{transform:scale(3);opacity:0}}
+
+/* Scroll reveal: aktif hanya kalau JS jalan (kelas .js dipasang di <head>) */
+.js [data-reveal]{
+  opacity:0;transform:translateY(16px);
+  transition:opacity 500ms var(--ease-out), transform 500ms var(--ease-out);
+}
+.js [data-reveal].in{opacity:1;transform:none}
+
+/* Reduced motion: lebih lembut, bukan nol. Posisi tidak bergerak, opacity tetap */
+@media (prefers-reduced-motion:reduce){
+  .hero .status,.hero h1,.hero .lead,.hero-ctas,.rail .shot,
+  .p-hero .kicker,.p-hero h1,.p-hero .lead,.p-strip img{animation-name:fade;animation-duration:300ms}
+  .status.open .dot::after{animation:none}
+  .js [data-reveal]{transform:none;transition-duration:250ms}
+  .btn:active,.tab:active,.chip span:active{transform:none}
+  .dock,.cartbar{transition:none}
+  .drawer{transform:none;opacity:0;transition:opacity 200ms var(--ease-out), display 200ms allow-discrete, overlay 200ms allow-discrete}
+  .drawer[open]{opacity:1}
+  @starting-style{.drawer[open]{opacity:0;transform:none}}
+  .lb-stage{transform:none;transition:none}
+}

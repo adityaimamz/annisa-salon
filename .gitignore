@@ -8,3 +8,8 @@ dist/
 .DS_Store
 # foto mentah dari WhatsApp (sudah dikonversi ke assets/)
 WhatsApp Image *.jpeg
+
+# skill agen (Emil Kowalski) - tidak perlu di repo
+.agents/
+.claude/skills/
+skills-lock.json

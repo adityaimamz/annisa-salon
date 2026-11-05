@@ -34,6 +34,7 @@ const jsonLd = {
   ogImage="/assets/foto/potong-layer.webp"
   jsonLd={jsonLd}
 >
+<script is:inline slot="head">if("IntersectionObserver" in window)document.documentElement.classList.add("js")</script>
 <SiteHeader home />
 
 <main id="top">
@@ -84,7 +85,7 @@ const jsonLd = {
 <!-- HASIL -->
 <section class="section" id="hasil">
   <div class="wrap">
-    <div class="sec-head split">
+    <div class="sec-head split" data-reveal>
       <div>
         <p class="kicker">Hasil</p>
         <h2 class="h2">Difoto langsung<br>di kursi salon.</h2>
@@ -103,22 +104,22 @@ const jsonLd = {
     </div>
 
     <div class="grid" id="grid">
-      <figure class="shot" data-c="warna potong"><button type="button"><img loading="lazy" src="/assets/foto/silver-bob-sm.webp" data-full="/assets/foto/silver-bob.webp" alt="Potongan bob pendek warna silver ash" width="520" height="693"></button><figcaption><b>Bob silver ash</b><span>warna + potong</span></figcaption></figure>
-      <figure class="shot" data-c="smoothing"><button type="button"><img loading="lazy" src="/assets/foto/smoothing-bob-sm.webp" data-full="/assets/foto/smoothing-bob.webp" alt="Rambut bob hitam lurus mengkilap hasil smoothing" width="520" height="693"></button><figcaption><b>Smoothing</b><span>bob</span></figcaption></figure>
-      <figure class="shot" data-c="warna"><button type="button"><img loading="lazy" src="/assets/foto/copper-panjang-sm.webp" data-full="/assets/foto/copper-panjang.webp" alt="Rambut panjang warna tembaga mengkilap" width="520" height="693"></button><figcaption><b>Coloring</b><span>tembaga</span></figcaption></figure>
-      <figure class="shot" data-c="alis"><button type="button"><img loading="lazy" src="/assets/foto/alis-2-sm.webp" data-full="/assets/foto/alis-2.webp" alt="Alis yang sudah dirapikan dan dipertegas" width="520" height="693"></button><figcaption><b>Eyebrow</b><span>rapikan alis</span></figcaption></figure>
-      <figure class="shot" data-c="warna potong"><button type="button"><img loading="lazy" src="/assets/foto/ombre-bob-sm.webp" data-full="/assets/foto/ombre-bob.webp" alt="Rambut bob ombre hitam ke pirang tampak belakang" width="520" height="693"></button><figcaption><b>Ombre bob</b><span>tampak belakang</span></figcaption></figure>
-      <figure class="shot" data-c="smoothing"><button type="button"><img loading="lazy" src="/assets/foto/smoothing-hitam-sm.webp" data-full="/assets/foto/smoothing-hitam.webp" alt="Rambut hitam lurus sebahu hasil smoothing" width="520" height="693"></button><figcaption><b>Smoothing</b><span>hitam natural</span></figcaption></figure>
-      <figure class="shot" data-c="kuku"><button type="button"><img loading="lazy" src="/assets/foto/kuku-marun-sm.webp" data-full="/assets/foto/kuku-marun.webp" alt="Kuku dicat warna merah marun" width="520" height="693"></button><figcaption><b>Manicure</b><span>marun</span></figcaption></figure>
-      <figure class="shot" data-c="warna"><button type="button"><img loading="lazy" src="/assets/foto/highlight-sm.webp" data-full="/assets/foto/highlight.webp" alt="Rambut dengan highlight pirang dari samping" width="520" height="693"></button><figcaption><b>Highlight</b><span>pirang</span></figcaption></figure>
-      <figure class="shot" data-c="anak"><button type="button"><img loading="lazy" src="/assets/foto/spa-kids-sm.webp" data-full="/assets/foto/spa-kids.webp" alt="Kolase spa kids: anak sedang dipijat dan di-scrub, harga 65 ribu" width="520" height="904"></button><figcaption><b>Spa kids</b><span>massage + scrub</span></figcaption></figure>
-      <figure class="shot" data-c="warna potong"><button type="button"><img loading="lazy" src="/assets/foto/ombre-samping-sm.webp" data-full="/assets/foto/ombre-samping.webp" alt="Ombre bob dengan poni samping" width="520" height="693"></button><figcaption><b>Ombre bob</b><span>poni samping</span></figcaption></figure>
-      <figure class="shot" data-c="smoothing"><button type="button"><img loading="lazy" src="/assets/foto/treatment-hitam-sm.webp" data-full="/assets/foto/treatment-hitam.webp" alt="Rambut hitam panjang lurus setelah treatment" width="520" height="693"></button><figcaption><b>Smoothing</b><span>panjang</span></figcaption></figure>
-      <figure class="shot" data-c="alis"><button type="button"><img loading="lazy" src="/assets/foto/alis-1-sm.webp" data-full="/assets/foto/alis-1.webp" alt="Close-up alis setelah dirapikan" width="520" height="770"></button><figcaption><b>Eyebrow</b><span>close-up</span></figcaption></figure>
-      <figure class="shot" data-c="warna"><button type="button"><img loading="lazy" src="/assets/foto/copper-belakang-sm.webp" data-full="/assets/foto/copper-belakang.webp" alt="Rambut panjang warna tembaga tampak belakang" width="520" height="693"></button><figcaption><b>Coloring</b><span>tembaga</span></figcaption></figure>
-      <figure class="shot" data-c="warna potong"><button type="button"><img loading="lazy" src="/assets/foto/ombre-madu-sm.webp" data-full="/assets/foto/ombre-madu.webp" alt="Ombre bob warna madu" width="520" height="693"></button><figcaption><b>Ombre</b><span>madu</span></figcaption></figure>
-      <figure class="shot" data-c="potong"><button type="button"><img loading="lazy" src="/assets/foto/potong-layer-sm.webp" data-full="/assets/foto/potong-layer.webp" alt="Potongan layer sebahu dengan poni tipis" width="520" height="693"></button><figcaption><b>Potong layer</b><span>sebahu</span></figcaption></figure>
-      <figure class="shot" data-c="smoothing"><button type="button"><img loading="lazy" src="/assets/foto/smoothing-panjang-sm.webp" data-full="/assets/foto/smoothing-panjang.webp" alt="Rambut panjang lurus hasil smoothing" width="520" height="693"></button><figcaption><b>Smoothing</b><span>panjang</span></figcaption></figure>
+      <figure class="shot" data-reveal data-c="warna potong"><button type="button"><img loading="lazy" src="/assets/foto/silver-bob-sm.webp" data-full="/assets/foto/silver-bob.webp" alt="Potongan bob pendek warna silver ash" width="520" height="693"></button><figcaption><b>Bob silver ash</b><span>warna + potong</span></figcaption></figure>
+      <figure class="shot" data-reveal data-c="smoothing"><button type="button"><img loading="lazy" src="/assets/foto/smoothing-bob-sm.webp" data-full="/assets/foto/smoothing-bob.webp" alt="Rambut bob hitam lurus mengkilap hasil smoothing" width="520" height="693"></button><figcaption><b>Smoothing</b><span>bob</span></figcaption></figure>
+      <figure class="shot" data-reveal data-c="warna"><button type="button"><img loading="lazy" src="/assets/foto/copper-panjang-sm.webp" data-full="/assets/foto/copper-panjang.webp" alt="Rambut panjang warna tembaga mengkilap" width="520" height="693"></button><figcaption><b>Coloring</b><span>tembaga</span></figcaption></figure>
+      <figure class="shot" data-reveal data-c="alis"><button type="button"><img loading="lazy" src="/assets/foto/alis-2-sm.webp" data-full="/assets/foto/alis-2.webp" alt="Alis yang sudah dirapikan dan dipertegas" width="520" height="693"></button><figcaption><b>Eyebrow</b><span>rapikan alis</span></figcaption></figure>
+      <figure class="shot" data-reveal data-c="warna potong"><button type="button"><img loading="lazy" src="/assets/foto/ombre-bob-sm.webp" data-full="/assets/foto/ombre-bob.webp" alt="Rambut bob ombre hitam ke pirang tampak belakang" width="520" height="693"></button><figcaption><b>Ombre bob</b><span>tampak belakang</span></figcaption></figure>
+      <figure class="shot" data-reveal data-c="smoothing"><button type="button"><img loading="lazy" src="/assets/foto/smoothing-hitam-sm.webp" data-full="/assets/foto/smoothing-hitam.webp" alt="Rambut hitam lurus sebahu hasil smoothing" width="520" height="693"></button><figcaption><b>Smoothing</b><span>hitam natural</span></figcaption></figure>
+      <figure class="shot" data-reveal data-c="kuku"><button type="button"><img loading="lazy" src="/assets/foto/kuku-marun-sm.webp" data-full="/assets/foto/kuku-marun.webp" alt="Kuku dicat warna merah marun" width="520" height="693"></button><figcaption><b>Manicure</b><span>marun</span></figcaption></figure>
+      <figure class="shot" data-reveal data-c="warna"><button type="button"><img loading="lazy" src="/assets/foto/highlight-sm.webp" data-full="/assets/foto/highlight.webp" alt="Rambut dengan highlight pirang dari samping" width="520" height="693"></button><figcaption><b>Highlight</b><span>pirang</span></figcaption></figure>
+      <figure class="shot" data-reveal data-c="anak"><button type="button"><img loading="lazy" src="/assets/foto/spa-kids-sm.webp" data-full="/assets/foto/spa-kids.webp" alt="Kolase spa kids: anak sedang dipijat dan di-scrub, harga 65 ribu" width="520" height="904"></button><figcaption><b>Spa kids</b><span>massage + scrub</span></figcaption></figure>
+      <figure class="shot" data-reveal data-c="warna potong"><button type="button"><img loading="lazy" src="/assets/foto/ombre-samping-sm.webp" data-full="/assets/foto/ombre-samping.webp" alt="Ombre bob dengan poni samping" width="520" height="693"></button><figcaption><b>Ombre bob</b><span>poni samping</span></figcaption></figure>
+      <figure class="shot" data-reveal data-c="smoothing"><button type="button"><img loading="lazy" src="/assets/foto/treatment-hitam-sm.webp" data-full="/assets/foto/treatment-hitam.webp" alt="Rambut hitam panjang lurus setelah treatment" width="520" height="693"></button><figcaption><b>Smoothing</b><span>panjang</span></figcaption></figure>
+      <figure class="shot" data-reveal data-c="alis"><button type="button"><img loading="lazy" src="/assets/foto/alis-1-sm.webp" data-full="/assets/foto/alis-1.webp" alt="Close-up alis setelah dirapikan" width="520" height="770"></button><figcaption><b>Eyebrow</b><span>close-up</span></figcaption></figure>
+      <figure class="shot" data-reveal data-c="warna"><button type="button"><img loading="lazy" src="/assets/foto/copper-belakang-sm.webp" data-full="/assets/foto/copper-belakang.webp" alt="Rambut panjang warna tembaga tampak belakang" width="520" height="693"></button><figcaption><b>Coloring</b><span>tembaga</span></figcaption></figure>
+      <figure class="shot" data-reveal data-c="warna potong"><button type="button"><img loading="lazy" src="/assets/foto/ombre-madu-sm.webp" data-full="/assets/foto/ombre-madu.webp" alt="Ombre bob warna madu" width="520" height="693"></button><figcaption><b>Ombre</b><span>madu</span></figcaption></figure>
+      <figure class="shot" data-reveal data-c="potong"><button type="button"><img loading="lazy" src="/assets/foto/potong-layer-sm.webp" data-full="/assets/foto/potong-layer.webp" alt="Potongan layer sebahu dengan poni tipis" width="520" height="693"></button><figcaption><b>Potong layer</b><span>sebahu</span></figcaption></figure>
+      <figure class="shot" data-reveal data-c="smoothing"><button type="button"><img loading="lazy" src="/assets/foto/smoothing-panjang-sm.webp" data-full="/assets/foto/smoothing-panjang.webp" alt="Rambut panjang lurus hasil smoothing" width="520" height="693"></button><figcaption><b>Smoothing</b><span>panjang</span></figcaption></figure>
     </div>
   </div>
 </section>
@@ -126,22 +127,22 @@ const jsonLd = {
 <!-- INFO -->
 <section class="section info" aria-labelledby="info-title">
   <div class="wrap">
-    <p class="kicker">Sebelum datang</p>
-    <h2 class="h2" id="info-title">Empat hal yang sering<br>ditanyakan.</h2>
+    <p class="kicker" data-reveal>Sebelum datang</p>
+    <h2 class="h2" id="info-title" data-reveal>Empat hal yang sering<br>ditanyakan.</h2>
     <div class="info-list">
-      <div class="info-item">
+      <div class="info-item" data-reveal>
         <h3>Semua perempuan.</h3>
         <p>Yang melayani terapis perempuan, yang datang juga sesama perempuan.</p>
       </div>
-      <div class="info-item">
+      <div class="info-item" data-reveal>
         <h3>Ruangan tertutup.</h3>
         <p>Hijab boleh dilepas dari awal sampai selesai. Ruang perawatan tidak menghadap jalan.</p>
       </div>
-      <div class="info-item">
+      <div class="info-item" data-reveal>
         <h3>Boleh bawa anak.</h3>
         <p>Si kecil bisa ikut spa kids: body massage dan scrub, Rp65 ribu.</p>
       </div>
-      <div class="info-item">
+      <div class="info-item" data-reveal>
         <h3>Buka tiap hari.</h3>
         <p>Jam 09.00 sampai 19.00, termasuk Sabtu dan Minggu.</p>
       </div>
@@ -152,7 +153,7 @@ const jsonLd = {
 <!-- LAYANAN -->
 <section class="section" id="layanan">
   <div class="wrap">
-    <div class="sec-head split">
+    <div class="sec-head split" data-reveal>
       <div>
         <p class="kicker">Layanan</p>
         <h2 class="h2">Menu perawatan.</h2>
@@ -161,7 +162,7 @@ const jsonLd = {
     </div>
 
     <div class="menu">
-      <div class="menu-group">
+      <div class="menu-group" data-reveal>
         <div class="menu-cat"><h3>Rambut</h3><p>Dari rapikan ujung sampai ganti warna.</p></div>
         <ul class="menu-list">
           <li><a class="menu-item" data-ask="Smoothing" href="https://wa.me/6285728958582"><span class="m-name">Smoothing</span><span class="m-price">Tanya harga →</span><span class="m-desc">Rambut jadi lurus, jatuh, dan gampang diatur.</span></a></li>
@@ -173,7 +174,7 @@ const jsonLd = {
         </ul>
       </div>
 
-      <div class="menu-group">
+      <div class="menu-group" data-reveal>
         <div class="menu-cat"><h3>Wajah</h3><p>Pilih merek produk yang biasa kamu pakai.</p></div>
         <div>
           <ul class="menu-list">
@@ -205,7 +206,7 @@ const jsonLd = {
         </div>
       </div>
 
-      <div class="menu-group">
+      <div class="menu-group" data-reveal>
         <div class="menu-cat"><h3>Badan</h3><p>Di ruang spa terpisah.</p></div>
         <ul class="menu-list">
           <li><a class="menu-item" data-ask="Lulur" href="https://wa.me/6285728958582"><span class="m-name">Lulur</span><span class="m-price">Tanya harga →</span><span class="m-desc">Mengangkat kulit mati, kulit lebih halus.</span></a></li>
@@ -214,7 +215,7 @@ const jsonLd = {
         </ul>
       </div>
 
-      <div class="menu-group">
+      <div class="menu-group" data-reveal>
         <div class="menu-cat"><h3>Kuku</h3></div>
         <ul class="menu-list">
           <li><a class="menu-item" data-ask="Manicure" href="https://wa.me/6285728958582"><span class="m-name">Manicure</span><span class="m-price">Tanya harga →</span><span class="m-desc">Kuku tangan dibersihkan, dibentuk, dan diwarnai.</span></a></li>
@@ -223,7 +224,7 @@ const jsonLd = {
         </ul>
       </div>
 
-      <div class="menu-group">
+      <div class="menu-group" data-reveal>
         <div class="menu-cat"><h3>Anak</h3></div>
         <ul class="menu-list">
           <li><a class="menu-item" data-ask="Spa kids" href="https://wa.me/6285728958582"><span class="m-name">Spa kids</span><span class="m-price fixed">Rp65.000</span><span class="m-desc">Body massage dan scrub khusus anak. Bisa sambil ibunya perawatan.</span></a></li>
@@ -236,14 +237,14 @@ const jsonLd = {
 <!-- PRODUK -->
 <section class="section shop" id="produk">
   <div class="wrap shop-grid">
-    <div>
+    <div data-reveal>
       <p class="kicker">Produk</p>
       <h2 class="h2">Bawa pulang<br>skincare-nya.</h2>
       <p class="sub">Kami juga jual skincare Gbee Glow Beauty, seri yang sama dengan Facial Glow Beauty di salon. Ada day &amp; night cream, facial wash, toner, jelly face, sampai produk untuk pria.</p>
       <p class="from">Mulai dari <b>Rp40.000</b> · 22 produk</p>
       <a class="btn btn-green" href="/produk">Lihat semua produk →</a>
     </div>
-    <div class="shop-imgs">
+    <div class="shop-imgs" data-reveal>
       <img loading="lazy" src="/assets/produk/krim-pink-gold.webp" alt="Day Cream Gbee" width="142" height="142">
       <img loading="lazy" src="/assets/produk/krim-set.webp" alt="Night Cream Gbee seri Gold dan Pink" width="142" height="142">
       <img loading="lazy" src="/assets/produk/rice-jelly.webp" alt="Rice Jelly Face Gbee" width="142" height="142">
@@ -254,7 +255,7 @@ const jsonLd = {
 <!-- TEMPAT -->
 <section class="section place" id="tempat">
   <div class="wrap place-grid">
-    <div>
+    <div data-reveal>
       <p class="kicker">Tempat</p>
       <h2 class="h2">Begini suasananya.</h2>
       <p class="sub">Buat yang baru pertama kali datang: area depan untuk rambut dan wajah, dengan meja rias dan cermin besar. Lulur dan massage di ruang spa yang terpisah.</p>
@@ -265,11 +266,11 @@ const jsonLd = {
       </ul>
     </div>
     <div class="place-photos">
-      <figure>
+      <figure data-reveal>
         <img class="a" loading="lazy" src="/assets/foto/salon-interior-sm.webp" alt="Area depan salon: meja rias panjang, cermin, kursi, dan lantai keramik putih" width="520" height="693">
         <figcaption>Area rambut &amp; wajah</figcaption>
       </figure>
-      <figure>
+      <figure data-reveal>
         <img class="b" loading="lazy" src="/assets/foto/ruang-spa-sm.webp" alt="Ruang spa dengan dua kasur pijat dan dinding bata ekspos" width="520" height="693">
         <figcaption>Ruang spa</figcaption>
       </figure>
@@ -280,7 +281,7 @@ const jsonLd = {
 <!-- BOOKING -->
 <section class="section" id="booking">
   <div class="wrap book-grid">
-    <div>
+    <div data-reveal>
       <p class="kicker">Booking</p>
       <h2 class="h2">Pesan jadwal<br>lewat WhatsApp.</h2>
       <ol class="steps">
@@ -291,7 +292,7 @@ const jsonLd = {
       <p class="direct">Lebih suka langsung chat? <a href="https://wa.me/6285728958582" target="_blank" rel="noopener">0857-2895-8582</a></p>
     </div>
 
-    <form class="form" id="form" novalidate>
+    <form class="form" id="form" novalidate data-reveal>
       <div class="field">
         <label for="nama">Nama</label>
         <input class="input" id="nama" name="nama" autocomplete="given-name" placeholder="Nama panggilan juga boleh" required>
@@ -343,7 +344,7 @@ const jsonLd = {
 <!-- LOKASI -->
 <section class="section loc" id="lokasi">
   <div class="wrap loc-grid">
-    <div>
+    <div data-reveal>
       <p class="kicker">Lokasi</p>
       <h2 class="h2">Mampir ke<br>Teuku Umar 58.</h2>
       <p class="addr">Jl. Teuku Umar No.58, Debong Tengah, Tegal Selatan, Kota Tegal 52192</p>
@@ -355,7 +356,7 @@ const jsonLd = {
         <a class="btn btn-line" href="tel:+6285728958582">Telepon</a>
       </div>
     </div>
-    <div class="map">
+    <div class="map" data-reveal>
       <iframe src="https://www.google.com/maps?q=An-Nisa%20Muslimah%20Salon%20Jl.%20Teuku%20Umar%20No.58%20Tegal&output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Peta lokasi An-Nisa Muslimah Salon"></iframe>
     </div>
   </div>
@@ -426,6 +427,21 @@ const jsonLd = {
     a.rel = 'noopener';
   });
 
+  // Scroll reveal: sekali saja, elemen yang masuk bersamaan diberi jeda 60ms
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  const io = new IntersectionObserver((entries) => {
+    let n = 0;
+    entries.forEach((e) => {
+      if (!e.isIntersecting) return;
+      const el = e.target;
+      el.style.transitionDelay = `${Math.min(n++, 5) * 60}ms`;
+      el.classList.add('in');
+      el.addEventListener('transitionend', () => { el.style.transitionDelay = ''; }, { once: true });
+      io.unobserve(el);
+    });
+  }, { rootMargin: '0px 0px -8% 0px', threshold: 0.12 });
+  document.querySelectorAll('[data-reveal]').forEach((el) => io.observe(el));
+
   // Gallery filter
   const tabs = document.querySelectorAll('.tab');
   const shots = [...document.querySelectorAll('#grid .shot')];
@@ -435,7 +451,19 @@ const jsonLd = {
     t.insertAdjacentHTML('beforeend', `<span class="n">${n}</span>`);
     t.addEventListener('click', () => {
       tabs.forEach((x) => x.setAttribute('aria-pressed', x === t));
-      shots.forEach((s) => { s.hidden = !(f === 'all' || s.dataset.c.split(' ').includes(f)); });
+      shots.forEach((s) => {
+        // lepas dari scroll reveal supaya tidak bentrok dengan animasi filter
+        io.unobserve(s);
+        s.removeAttribute('data-reveal');
+        s.hidden = !(f === 'all' || s.dataset.c.split(' ').includes(f));
+      });
+      // foto yang tampil masuk lagi dengan stagger tipis (transform + opacity, WAAPI)
+      shots.filter((s) => !s.hidden).forEach((s, i) => {
+        s.animate(
+          [{ opacity: 0, transform: reduceMotion.matches ? 'none' : 'translateY(8px)' }, { opacity: 1, transform: 'none' }],
+          { duration: 260, delay: Math.min(i, 8) * 30, easing: 'cubic-bezier(0.23, 1, 0.32, 1)', fill: 'backwards' }
+        );
+      });
     });
   });
 
