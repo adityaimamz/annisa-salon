@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { signIn } from './api';
+import { Icon } from './ui';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -37,6 +38,7 @@ export default function Login() {
         </div>
         <button className="btn btn-green" type="submit" disabled={busy || !email || !password}>{busy ? 'Masuk…' : 'Masuk'}</button>
         {err && <p className="err" role="alert">{err}</p>}
+        <a className="login-back" href="/">{Icon.back(16)}Kembali ke beranda</a>
       </form>
     </div>
   );

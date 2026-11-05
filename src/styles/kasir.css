@@ -375,6 +375,8 @@ body{background:var(--paper);font-size:15px;overflow:hidden}
 .login p.sub{color:var(--ink-3);font-size:14px;margin-bottom:20px}
 .login .field{margin-bottom:14px}
 .login .btn{width:100%;margin-top:6px}
+.login-back{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:18px;padding:8px;font-size:14px;font-weight:600;color:var(--ink-2)}
+.login-back:hover{color:var(--green)}
 .login .err{color:var(--danger);font-size:13.5px;margin-top:12px;animation:k-fade 150ms var(--ease-out) both}
 /* jeda 150ms: kalau memuat cepat, teks tidak sempat berkedip */
 .boot{min-height:100dvh;display:grid;place-items:center;color:var(--ink-3);background:var(--paper);animation:k-fade 250ms 150ms var(--ease-out) both}
