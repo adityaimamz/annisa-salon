@@ -393,6 +393,7 @@ const jsonLd = {
 
 <script>
 import { supabase } from '../lib/supabase';
+import { loadMenuHtml } from '../lib/menu';
 
 (() => {
   const WA = '6285728958582';
@@ -423,11 +424,12 @@ import { supabase } from '../lib/supabase';
   onScroll();
 
   // Service rows -> WhatsApp with prefilled question
-  document.querySelectorAll('.menu-item[data-ask]').forEach((a) => {
+  const wireAsk = (root) => root.querySelectorAll('.menu-item[data-ask]').forEach((a) => {
     a.href = waLink(`Assalamualaikum kak, mau tanya harga ${a.dataset.ask} di An-Nisa Muslimah Salon.`);
     a.target = '_blank';
     a.rel = 'noopener';
   });
+  wireAsk(document);
 
   // Scroll reveal: sekali saja, elemen yang masuk bersamaan diberi jeda 60ms
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
@@ -443,6 +445,23 @@ import { supabase } from '../lib/supabase';
     });
   }, { rootMargin: '0px 0px -8% 0px', threshold: 0.12 });
   document.querySelectorAll('[data-reveal]').forEach((el) => io.observe(el));
+
+  // Daftar layanan: nama, harga, dan deskripsi ikut katalog di dashboard (tab Harga > Layanan).
+  // Layanan berharga contoh tampil "Tanya harga". HTML di atas jadi cadangan kalau fetch gagal.
+  (async () => {
+    const menu = document.querySelector('.menu');
+    const html = await loadMenuHtml().catch(() => null);
+    if (!menu || !html) return;
+    const seen = [...menu.children].map((g) => g.classList.contains('in'));
+    menu.innerHTML = html;
+    [...menu.children].forEach((g, i) => {
+      // grup yang sudah sempat muncul tidak dianimasikan ulang (hindari berkedip)
+      if (seen[i]) { g.classList.add('in'); return; }
+      g.setAttribute('data-reveal', '');
+      io.observe(g);
+    });
+    wireAsk(menu);
+  })();
 
   // Teaser produk: jumlah & harga terendah ikut katalog (aktif/nonaktif & harga dari tab Harga di dashboard).
   // Teks bawaan di HTML tetap jadi cadangan kalau fetch gagal.

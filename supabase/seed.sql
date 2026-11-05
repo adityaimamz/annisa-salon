@@ -1,5 +1,5 @@
 -- Seed katalog & terapis. Diambil dari CATALOG di kasir/index.html.
--- Harga rambut, alis, badan, kuku masih CONTOH (is_sample = true): ganti dengan harga salon.
+-- Harga di sini adalah harga awal; ganti lewat menu Harga di dashboard.
 
 insert into public.categories (id,name,sort) values
   ('rambut','Rambut',0),
@@ -10,25 +10,25 @@ insert into public.categories (id,name,sort) values
   ('produk','Produk Gbee',5);
 
 insert into public.catalog_items (id,category_id,name,note,is_service,price,variant_label,variants,options,is_sample,sort) values
-  ('smoothing','rambut','Smoothing',null,true,null,'Panjang rambut','[["Pendek",200000],["Sebahu",250000],["Panjang",300000]]'::jsonb,null,true,0),
-  ('coloring','rambut','Coloring',null,true,null,'Panjang rambut','[["Pendek",150000],["Sebahu",200000],["Panjang",250000]]'::jsonb,null,true,1),
-  ('bleaching','rambut','Bleaching & toning',null,true,175000,null,null,null,true,2),
-  ('potong','rambut','Potong rambut',null,true,35000,null,null,null,true,3),
-  ('creambath','rambut','Creambath',null,true,50000,null,null,null,true,4),
-  ('hairspa','rambut','Hair spa',null,true,75000,null,null,null,true,5),
+  ('smoothing','rambut','Smoothing',null,true,null,'Panjang rambut','[["Pendek",200000],["Sebahu",250000],["Panjang",300000]]'::jsonb,null,false,0),
+  ('coloring','rambut','Coloring',null,true,null,'Panjang rambut','[["Pendek",150000],["Sebahu",200000],["Panjang",250000]]'::jsonb,null,false,1),
+  ('bleaching','rambut','Bleaching & toning',null,true,175000,null,null,null,false,2),
+  ('potong','rambut','Potong rambut',null,true,35000,null,null,null,false,3),
+  ('creambath','rambut','Creambath',null,true,50000,null,null,null,false,4),
+  ('hairspa','rambut','Hair spa',null,true,75000,null,null,null,false,5),
   ('facial-reg','wajah','Facial reguler',null,true,55000,null,null,null,false,6),
   ('facial-detox','wajah','Facial detox',null,true,150000,null,null,null,false,7),
   ('facial-gbee','wajah','Facial Glow Beauty','by Gbee',true,95000,null,null,null,false,8),
   ('facial-basic','wajah','Facial basic',null,true,null,'Merek','[["Sariayu",65000],["Wardah",75000],["La Tulipe",75000],["Biokos",85000],["Ristra",85000]]'::jsonb,null,false,9),
   ('facial-trt','wajah','Facial treatment','brightening · anti aging · collagen · acne',true,null,'Merek','[["Sariayu",80000],["Wardah",90000],["La Tulipe",90000],["Biokos",95000],["Ristra",95000]]'::jsonb,'["Brightening","Anti Aging","Collagen","Acne"]'::jsonb,false,10),
   ('totok','wajah','Totok wajah',null,true,null,'Merek','[["Sariayu",50000],["Wardah",55000],["La Tulipe",55000],["Biokos",60000],["Ristra",60000],["Gbee",60000]]'::jsonb,null,false,11),
-  ('eyebrow','wajah','Eyebrow',null,true,30000,null,null,null,true,12),
-  ('lulur','badan','Lulur',null,true,75000,null,null,null,true,13),
-  ('massage','badan','Body massage',null,true,85000,null,null,null,true,14),
-  ('whitening','badan','Whitening',null,true,100000,null,null,null,true,15),
-  ('mani','kuku','Manicure',null,true,35000,null,null,null,true,16),
-  ('pedi','kuku','Pedicure',null,true,40000,null,null,null,true,17),
-  ('nailart','kuku','Nail art',null,true,60000,null,null,null,true,18),
+  ('eyebrow','wajah','Eyebrow',null,true,30000,null,null,null,false,12),
+  ('lulur','badan','Lulur',null,true,75000,null,null,null,false,13),
+  ('massage','badan','Body massage',null,true,85000,null,null,null,false,14),
+  ('whitening','badan','Whitening',null,true,100000,null,null,null,false,15),
+  ('mani','kuku','Manicure',null,true,35000,null,null,null,false,16),
+  ('pedi','kuku','Pedicure',null,true,40000,null,null,null,false,17),
+  ('nailart','kuku','Nail art',null,true,60000,null,null,null,false,18),
   ('spakids','anak','Spa kids','massage + scrub',true,65000,null,null,null,false,19),
   ('g-day-cream-pink12-5-g','produk','Day Cream Pink','12,5 g',false,75000,null,null,null,false,20),
   ('g-night-cream-pink12-5-g','produk','Night Cream Pink','12,5 g',false,75000,null,null,null,false,21),

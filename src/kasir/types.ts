@@ -20,11 +20,11 @@ export interface Item {
   k?: string;
   service: boolean;
   price?: number; // harga kasir
-  webPrice?: number; // harga di website (landing & /produk); kosong = ikut harga kasir
+  webPrice?: number; // harga produk di website (landing & /produk); kosong = ikut harga kasir. Layanan selalu memakai `price`.
+  desc?: string; // deskripsi layanan di website
   vlabel?: string;
   variants?: Variant[];
   opts?: string[];
-  sample: boolean;
   off: boolean;
   sort: number;
 }

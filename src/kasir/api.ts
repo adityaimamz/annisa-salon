@@ -23,19 +23,19 @@ export async function loadProfile(userId: string): Promise<Profile | null> {
 interface ItemRow {
   id: string; category_id: string; name: string; note: string | null; is_service: boolean;
   price: number | null; web_price: number | null; variant_label: string | null; variants: [string, number][] | null;
-  options: string[] | null; is_sample: boolean; active: boolean; sort: number;
+  options: string[] | null; active: boolean; sort: number; description: string | null;
 }
 
 const fromRow = (r: ItemRow): Item => ({
   id: r.id, cat: r.category_id, name: r.name, k: r.note ?? undefined, service: r.is_service,
   price: r.price ?? undefined, webPrice: r.web_price ?? undefined, vlabel: r.variant_label ?? undefined, variants: r.variants ?? undefined,
-  opts: r.options ?? undefined, sample: r.is_sample, off: !r.active, sort: r.sort,
+  opts: r.options ?? undefined, off: !r.active, sort: r.sort, desc: r.description ?? undefined,
 });
 
 const toRow = (it: Item): ItemRow => ({
   id: it.id, category_id: it.cat, name: it.name, note: it.k ?? null, is_service: it.service,
   price: it.price ?? null, web_price: it.webPrice ?? null, variant_label: it.vlabel ?? null, variants: it.variants ?? null,
-  options: it.opts ?? null, is_sample: it.sample, active: !it.off, sort: it.sort,
+  options: it.opts ?? null, active: !it.off, sort: it.sort, description: it.desc ?? null,
 });
 
 export async function loadCatalog(): Promise<{ cats: Category[]; items: Item[] }> {
