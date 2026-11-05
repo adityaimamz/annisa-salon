@@ -9,6 +9,8 @@ export default function GaleriView() {
   const [photos, setPhotos] = useState<Photo[] | null>(null);
   const [error, setError] = useState('');
   const [editing, setEditing] = useState<Photo | 'new' | null>(null);
+  const [q, setQ] = useState('');
+  const [cat, setCat] = useState('all');
 
   const reload = useCallback(async () => {
     try { setPhotos(await loadGallery()); setError(''); }
@@ -17,6 +19,12 @@ export default function GaleriView() {
   useEffect(() => { reload(); }, [reload]);
 
   const allCats = [...new Set((photos ?? []).flatMap((p) => p.cats))];
+  const activeCat = cat === 'all' || allCats.includes(cat) ? cat : 'all'; // kategori terakhir terhapus -> kembali ke Semua
+  const query = q.trim().toLowerCase();
+  const shown = (photos ?? []).filter((p) =>
+    (activeCat === 'all' || p.cats.includes(activeCat)) &&
+    (!query || [p.title, p.sub, p.cats.join(' ')].join(' ').toLowerCase().includes(query)));
+  const count = (c: string) => (photos ?? []).filter((p) => p.cats.includes(c)).length;
 
   async function toggle(p: Photo, on: boolean) {
     try {
@@ -27,12 +35,13 @@ export default function GaleriView() {
   }
 
   async function move(i: number, dir: -1 | 1) {
-    const list = photos!;
-    const a = list[i], b = list[i + dir];
+    // tetangga dihitung dari daftar yang sedang tampil (hasil cari/filter), lalu tukar nilai sort-nya
+    const a = shown[i], b = shown[i + dir];
     if (!b) return;
-    // tukar nilai sort; kalau kebetulan sama, pakai posisi supaya tetap bergeser
-    const sa = a.sort === b.sort ? i + dir : b.sort;
-    const sb = a.sort === b.sort ? i : a.sort;
+    const ia = photos!.indexOf(a), ib = photos!.indexOf(b);
+    // kalau nilai sort kebetulan sama, pakai posisi di daftar penuh supaya tetap bergeser
+    const sa = a.sort === b.sort ? ib : b.sort;
+    const sb = a.sort === b.sort ? ia : a.sort;
     try {
       await Promise.all([savePhoto({ ...a, sort: sa }), savePhoto({ ...b, sort: sb })]);
       setPhotos((cur) => {
@@ -50,12 +59,30 @@ export default function GaleriView() {
         <button className="btn btn-green btn-sm" type="button" onClick={() => setEditing('new')}>+ Tambah foto</button>
       </div>
       <div className="pad">
+        {photos && photos.length > 0 && (
+          <div className="pr-tools">
+            <label className="search">
+              {Icon.search()}
+              <input className="input" type="search" placeholder="Cari judul, keterangan, kategori…" autoComplete="off"
+                aria-label="Cari foto" value={q} onChange={(e) => setQ(e.target.value)} />
+            </label>
+            {allCats.length > 0 && (
+              <div className="tabs" role="group" aria-label="Kategori">
+                <button className="tab" aria-pressed={activeCat === 'all'} onClick={() => setCat('all')}>Semua<span className="n">{photos.length}</span></button>
+                {allCats.map((c) => (
+                  <button key={c} className="tab" aria-pressed={activeCat === c} onClick={() => setCat(c)}>{c}<span className="n">{count(c)}</span></button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         {error ? <p className="empty-cart"><b>Gagal memuat galeri</b>{error}</p>
           : !photos ? <p className="empty-cart">Memuat…</p>
           : !photos.length ? <p className="empty-cart"><b>Belum ada foto</b>Ketuk “Tambah foto” untuk mulai.</p>
+          : !shown.length ? <p className="empty-cart"><b>Tidak ada foto yang cocok</b>Ubah kata kunci atau kategori.</p>
           : (
             <div className="gl-grid">
-              {photos.map((p, i) => (
+              {shown.map((p, i) => (
                 <div className={`gl-card${p.off ? ' off' : ''}`} key={p.id}>
                   <button type="button" className="gl-img" aria-label={`Ubah ${p.title}`} onClick={() => setEditing(p)}>
                     <img src={p.thumb} alt={p.alt || p.title} loading="lazy" />
@@ -72,7 +99,7 @@ export default function GaleriView() {
                     </label>
                     <span className="gl-move">
                       <button className="icon-btn" type="button" aria-label="Geser ke awal" disabled={i === 0} onClick={() => move(i, -1)}>↑</button>
-                      <button className="icon-btn" type="button" aria-label="Geser ke belakang" disabled={i === photos.length - 1} onClick={() => move(i, 1)}>↓</button>
+                      <button className="icon-btn" type="button" aria-label="Geser ke belakang" disabled={i === shown.length - 1} onClick={() => move(i, 1)}>↓</button>
                       <button className="icon-btn" type="button" aria-label={`Ubah ${p.title}`} onClick={() => setEditing(p)}>{Icon.edit()}</button>
                     </span>
                   </div>
