@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   deleteItem, loadCatalog, loadProfile, loadTherapists, saveItem, signOut,
 } from './api';
+import GaleriView from './GaleriView';
 import HargaView from './HargaView';
 import KaryawanView from './KaryawanView';
 import KasirView from './KasirView';
@@ -13,12 +14,13 @@ import type { Category, Item, Profile, Therapist } from './types';
 import { ConfirmProvider, Icon, ToastProvider, useToast } from './ui';
 import { supabase, supabaseReady } from '../lib/supabase';
 
-type View = 'kasir' | 'transaksi' | 'keuangan' | 'harga' | 'karyawan';
+type View = 'kasir' | 'transaksi' | 'keuangan' | 'harga' | 'galeri' | 'karyawan';
 const NAV: { id: View; label: string; icon: (s?: number) => React.ReactNode; ownerOnly?: boolean }[] = [
   { id: 'kasir', label: 'Kasir', icon: Icon.kasir },
   { id: 'transaksi', label: 'Transaksi', icon: Icon.transaksi, ownerOnly: true },
   { id: 'keuangan', label: 'Keuangan', icon: Icon.keuangan, ownerOnly: true },
   { id: 'harga', label: 'Harga', icon: Icon.harga },
+  { id: 'galeri', label: 'Galeri', icon: Icon.galeri, ownerOnly: true },
   { id: 'karyawan', label: 'Karyawan', icon: Icon.karyawan, ownerOnly: true },
 ];
 
@@ -128,6 +130,7 @@ function Shell({ userId }: { userId: string }) {
         {current === 'transaksi' && <TransaksiView refreshKey={refreshKey} />}
         {current === 'keuangan' && <KeuanganView cats={cats} refreshKey={refreshKey} />}
         {current === 'harga' && <HargaView cats={cats} items={items} onSave={save} onDelete={remove} readOnly={!isOwner} />}
+        {current === 'galeri' && <GaleriView />}
         {current === 'karyawan' && <KaryawanView />}
       </main>
 

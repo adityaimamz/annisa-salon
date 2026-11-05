@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 import type {
-  CartLine, Category, Expense, Item, PayMethod, Profile, StaffMember, Therapist, Tx, TxLine,
+  CartLine, Category, Expense, Item, PayMethod, Photo, Profile, StaffMember, Therapist, Tx, TxLine,
 } from './types';
 
 function db() {
@@ -184,6 +184,64 @@ export async function deleteStaff(id: string) {
   const { error } = await db().rpc('delete_staff', { p_id: id });
   fail(error);
 }
+
+/* ---------- galeri (hanya owner yang boleh menulis; ditegakkan RLS + policy Storage) ---------- */
+interface PhotoRow {
+  id: string; title: string; subtitle: string | null; alt: string | null; categories: string[];
+  image_url: string; thumb_url: string; width: number | null; height: number | null; sort: number; active: boolean;
+}
+const photoFrom = (r: PhotoRow): Photo => ({
+  id: r.id, title: r.title, sub: r.subtitle ?? '', alt: r.alt ?? '', cats: r.categories,
+  image: r.image_url, thumb: r.thumb_url, w: r.width, h: r.height, sort: r.sort, off: !r.active,
+});
+const photoTo = (p: Photo): PhotoRow => ({
+  id: p.id, title: p.title, subtitle: p.sub || null, alt: p.alt || null, categories: p.cats,
+  image_url: p.image, thumb_url: p.thumb, width: p.w, height: p.h, sort: p.sort, active: !p.off,
+});
+
+const BUCKET = 'gallery';
+// URL Storage -> path di bucket; foto bawaan situs (/assets/...) bukan di Storage, jadi null.
+const storagePath = (url: string) => {
+  const i = url.indexOf(`/${BUCKET}/`);
+  return url.startsWith('http') && i >= 0 ? url.slice(i + BUCKET.length + 2) : null;
+};
+
+export async function loadGallery(): Promise<Photo[]> {
+  const { data, error } = await db().from('gallery_photos').select('*').order('sort').order('created_at');
+  fail(error);
+  return (data as PhotoRow[]).map(photoFrom);
+}
+
+export async function savePhoto(p: Photo) {
+  const { error } = await db().from('gallery_photos').upsert(photoTo(p));
+  fail(error);
+}
+
+async function removeFiles(urls: string[]) {
+  const paths = urls.map(storagePath).filter((x): x is string => !!x);
+  if (paths.length) await db().storage.from(BUCKET).remove(paths); // sisa berkas yatim tidak fatal
+}
+
+export async function deletePhoto(p: Photo) {
+  const { error } = await db().from('gallery_photos').delete().eq('id', p.id);
+  fail(error);
+  await removeFiles([p.image, p.thumb]);
+}
+
+/** Unggah versi penuh + thumbnail; mengembalikan URL publiknya. */
+export async function uploadPhoto(full: Blob, thumb: Blob): Promise<{ image: string; thumb: string }> {
+  const id = crypto.randomUUID();
+  const up = async (path: string, b: Blob) => {
+    const { error } = await db().storage.from(BUCKET).upload(path, b, { contentType: 'image/webp', cacheControl: '31536000' });
+    fail(error);
+    return db().storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+  };
+  const image = await up(`${id}.webp`, full);
+  try { return { image, thumb: await up(`${id}-sm.webp`, thumb) }; }
+  catch (e) { await removeFiles([image]); throw e; }
+}
+
+export { removeFiles as removePhotoFiles };
 
 /* ---------- auth ---------- */
 export async function signIn(email: string, password: string) {

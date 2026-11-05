@@ -87,3 +87,17 @@ export interface CartLine {
 }
 
 export const EXP_CATS = ['Belanja bahan', 'Stok produk', 'Gaji', 'Listrik & air', 'Sewa', 'Lainnya'];
+
+export interface Photo {
+  id: string;
+  title: string;
+  sub: string;
+  alt: string;
+  cats: string[];
+  image: string; // versi penuh (lightbox)
+  thumb: string; // versi kecil (grid)
+  w: number | null;
+  h: number | null;
+  sort: number;
+  off: boolean;
+}

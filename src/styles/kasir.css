@@ -458,3 +458,26 @@ body{background:var(--paper);font-size:15px;overflow:hidden}
   .navi:active,.item:active,.cartbar2:active,.var-btn:active,.pay span:active,.seg button:active,
   .mini-step button:active,.cash .quick button:active{transform:none}
 }
+
+/* ===== galeri ===== */
+.gl-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px 12px}
+@media (min-width:700px){.gl-grid{grid-template-columns:repeat(3,1fr)}}
+@media (min-width:1000px){.gl-grid{grid-template-columns:repeat(4,1fr)}}
+.gl-card{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+.gl-card.off .gl-img img{opacity:.45}
+.gl-img{position:relative;display:block;border:0;padding:0;background:var(--paper-2);cursor:pointer;aspect-ratio:3/4}
+.gl-img img{width:100%;height:100%;object-fit:cover;transition:opacity .2s}
+.gl-img .tagx{position:absolute;left:8px;top:8px}
+.gl-meta{padding:10px 12px 4px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.gl-meta b{font-size:14.5px}
+.gl-meta span{font-size:12.5px;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gl-bar{display:flex;align-items:center;justify-content:space-between;padding:6px 8px 10px 12px}
+.gl-move{display:flex}
+.gl-move .icon-btn{width:34px;height:34px;font-size:16px}
+.gl-move .icon-btn:disabled{opacity:.3;cursor:default}
+.gl-pick{display:flex;gap:14px;align-items:flex-start}
+.gl-prev{width:96px;aspect-ratio:3/4;flex:none;border-radius:8px;background:var(--paper-2);border:1px solid var(--line);overflow:hidden;display:grid;place-items:center;font-size:12px;color:var(--ink-3);text-align:center}
+.gl-prev img{width:100%;height:100%;object-fit:cover}
+.gl-note{font-size:12.5px;color:var(--ink-3);margin-top:8px;line-height:1.5}
+.gl-addcat{display:flex;gap:8px;margin-top:10px}
+.gl-addcat .input{flex:1;min-width:0}
