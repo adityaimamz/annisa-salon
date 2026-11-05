@@ -45,21 +45,36 @@ export function Sheet({
   open, onClose, labelledBy, children,
 }: { open: boolean; onClose: () => void; labelledBy: string; children: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null);
+  // simpan isi terakhir supaya animasi keluar tidak menampilkan kartu kosong
+  const last = useRef<ReactNode>(null);
+  const [closing, setClosing] = useState(false);
+  if (open) last.current = children;
+
   useEffect(() => {
     const d = ref.current;
     if (!d) return;
-    if (open && !d.open) d.showModal();
-    if (!open && d.open) d.close();
+    if (open) {
+      setClosing(false);
+      if (!d.open) d.showModal();
+      return;
+    }
+    if (!d.open) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { d.close(); return; }
+    setClosing(true);
+    const t = window.setTimeout(() => { d.close(); setClosing(false); }, 150);
+    return () => window.clearTimeout(t);
   }, [open]);
+
   return (
     <dialog
       ref={ref}
       className="sheet"
+      data-closing={closing || undefined}
       aria-labelledby={labelledBy}
       onClose={onClose}
       onClick={(e) => { if (e.target === ref.current) onClose(); }}
     >
-      {open && children}
+      {(open || closing) && last.current}
     </dialog>
   );
 }
@@ -94,7 +109,7 @@ export function ReceiptSheet({ tx, fresh, onClose }: { tx: Tx | null; fresh: boo
           <CloseBtn onClick={onClose} />
           {fresh && (
             <div className="ok-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M5 12l5 5 9-10" /></svg>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path className="tick" pathLength={1} d="M5 12l5 5 9-10" /></svg>
             </div>
           )}
           <h3 id="okTitle">{fresh ? 'Pembayaran berhasil' : 'Detail transaksi'}</h3>

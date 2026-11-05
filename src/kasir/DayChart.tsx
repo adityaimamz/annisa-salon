@@ -57,8 +57,11 @@ export default function DayChart({ series }: { series: DayPoint[] }) {
           ))}
         </g>
         {series.map((s, i) => (
-          <g key={i}>
-            <path d={bar(padL + slot * i + slot / 2 - bw / 2, s.inc)} fill="var(--c-in)" />
+          <g key={`${n}-${i}`}>
+            {s.inc > 0 && (
+              <path className="bar" style={{ '--i': i } as React.CSSProperties}
+                d={bar(padL + slot * i + slot / 2 - bw / 2, s.inc)} fill="var(--c-in)" />
+            )}
             <rect className="hit" x={padL + slot * i} y={padT} width={slot} height={H - padT - padB} fill="transparent"
               onMouseEnter={() => setHover(i)} onClick={() => setHover(i)} />
           </g>

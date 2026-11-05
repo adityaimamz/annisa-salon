@@ -98,7 +98,7 @@ export default function KeuanganView({ cats, refreshKey }: { cats: Category[]; r
             <div className="hbar">
               {byCat.map((c) => (
                 <div className="hbar-row" key={c.name} title={`${c.name}: ${rp(c.v)}`}>
-                  <span>{c.name}</span><div className="track"><div className="fill" style={{ width: `${(c.v / cmax) * 100}%` }} /></div>
+                  <span>{c.name}</span><div className="track"><div className="fill" style={{ transform: `scaleX(${Math.max(0.01, c.v / cmax)})` }} /></div>
                   <b>{rpk(c.v)}<span className="pct">{Math.round((c.v / ctot) * 100)}%</span></b>
                 </div>
               ))}
@@ -113,7 +113,7 @@ export default function KeuanganView({ cats, refreshKey }: { cats: Category[]; r
             <div className="hbar exp-bars">
               {byExp.map((c) => (
                 <div className="hbar-row" key={c.name} title={`${c.name}: ${rp(c.v)}`}>
-                  <span>{c.name}</span><div className="track"><div className="fill" style={{ width: `${(c.v / emax) * 100}%` }} /></div>
+                  <span>{c.name}</span><div className="track"><div className="fill" style={{ transform: `scaleX(${Math.max(0.01, c.v / emax)})` }} /></div>
                   <b>{rpk(c.v)}<span className="pct">{out ? Math.round((c.v / out) * 100) : 0}%</span></b>
                 </div>
               ))}

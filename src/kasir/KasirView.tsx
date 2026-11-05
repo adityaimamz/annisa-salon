@@ -130,19 +130,22 @@ export default function KasirView({ cats, items, therapists, profile, onPaid }: 
               ))}
             </div>
           </div>
-          <div className="items">
+          <div className="items" key={cat}>
             {list.length ? groups.map(([c, arr]) => (
               <Group key={c?.id ?? 'all'} label={c?.name}>
-                {arr.map((it) => (
-                  <button key={it.id} className="item" type="button" onClick={() => pickItem(it)}>
-                    <span>
-                      <span className="n">{it.name}</span>
-                      {it.k && <span className="k" style={{ display: 'block' }}>{it.k}</span>}
-                    </span>
-                    <span className="p">{priceLabel(it)}</span>
-                    {qtyOf(it.id) > 0 && <span className="badge">{qtyOf(it.id)}</span>}
-                  </button>
-                ))}
+                {arr.map((it) => {
+                  const n = qtyOf(it.id);
+                  return (
+                    <button key={it.id} className="item" type="button" onClick={() => pickItem(it)}>
+                      <span>
+                        <span className="n">{it.name}</span>
+                        {it.k && <span className="k" style={{ display: 'block' }}>{it.k}</span>}
+                      </span>
+                      <span className="p">{priceLabel(it)}</span>
+                      {n > 0 && <span className="badge" key={n}>{n}</span>}
+                    </button>
+                  );
+                })}
               </Group>
             )) : (
               <p className="empty-cart" style={{ gridColumn: '1/-1' }}>
@@ -178,7 +181,7 @@ export default function KasirView({ cats, items, therapists, profile, onPaid }: 
                   ) : <span className="v">Produk</span>}
                   <span className="mini-step">
                     <button type="button" aria-label="Kurangi" onClick={() => step(i, -1)}>−</button>
-                    <span>{l.qty}</span>
+                    <span className="qty" key={l.qty}>{l.qty}</span>
                     <button type="button" aria-label="Tambah" onClick={() => step(i, 1)}>+</button>
                   </span>
                 </div>

@@ -56,13 +56,13 @@ export default function TransaksiView({ refreshKey }: { refreshKey: number }) {
           <tbody>
             {all === null ? (
               <tr><td colSpan={5} className="muted" style={{ textAlign: 'center', padding: 40 }}>Memuat…</td></tr>
-            ) : list.length ? list.map((t) => {
+            ) : list.length ? list.map((t, idx) => {
               const k = dayKey(t.at);
               const head = range === '7' && k !== last;
               last = k;
               return (
                 <FragmentRow key={t.id} head={head ? fmtDay(t.at) : null}>
-                  <tr onClick={() => setSel(t)}>
+                  <tr className="tx-row" style={{ '--i': idx } as React.CSSProperties} onClick={() => setSel(t)}>
                     <td className="c-time">{fmtTime(t.at)}</td>
                     <td className="c-no muted">{t.no}</td>
                     <td className="c-items">
