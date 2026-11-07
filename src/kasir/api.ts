@@ -108,6 +108,7 @@ export async function loadTransactions(sinceMs: number): Promise<Tx[]> {
 export interface PayInput {
   customer: string; wa: string; discount: number; pay: PayMethod; cash: number;
   lines: CartLine[]; cashierName: string;
+  clientId?: string; createdAt?: number; // transaksi offline: id unik + waktu bayar asli
 }
 
 export async function createTransaction(p: PayInput): Promise<Tx> {
@@ -117,6 +118,8 @@ export async function createTransaction(p: PayInput): Promise<Tx> {
     p_discount: p.discount,
     p_pay: p.pay,
     p_cash: p.cash,
+    p_client_id: p.clientId ?? null,
+    p_created_at: p.createdAt ? new Date(p.createdAt).toISOString() : null,
     p_items: p.lines.map((l) => ({
       catalog_item_id: l.id, category_id: l.cat, name: l.name, price: l.price, qty: l.qty,
       therapist_id: l.terapis ? Number(l.terapis) : null,

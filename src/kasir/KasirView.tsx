@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { createTransaction } from './api';
+import { enqueue, isNetworkError } from './offline';
 import { money, num, rp, rpk } from './format';
 import type { CartLine, Category, Item, PayMethod, Profile, Therapist, Tx } from './types';
 import { CloseBtn, Icon, ReceiptSheet, Select, Sheet, useToast } from './ui';
@@ -18,9 +19,10 @@ interface Props {
   therapists: Therapist[];
   profile: Profile;
   onPaid: () => void;
+  onQueued: () => void;
 }
 
-export default function KasirView({ cats, items, therapists, profile, onPaid }: Props) {
+export default function KasirView({ cats, items, therapists, profile, onPaid, onQueued }: Props) {
   const toast = useToast();
   const [cat, setCat] = useState('all');
   const [query, setQuery] = useState('');
@@ -93,17 +95,37 @@ export default function KasirView({ cats, items, therapists, profile, onPaid }: 
   async function doPay() {
     if (!ok || paying) return;
     setPaying(true);
-    try {
-      const tx = await createTransaction({
-        customer: cust.trim(), wa: wa.trim(), discount, pay, cash: pay === 'Tunai' ? cash : 0,
-        lines: cart, cashierName: profile.name,
-      });
-      tx.lines = cart.map((l) => ({
-        id: l.id, cat: l.cat, name: l.name, price: l.price, qty: l.qty,
-        terapis: therapists.find((t) => String(t.id) === l.terapis)?.name ?? null,
-      }));
+    const clientId = crypto.randomUUID();
+    const createdAt = Date.now();
+    const input = {
+      customer: cust.trim(), wa: wa.trim(), discount, pay, cash: pay === 'Tunai' ? cash : 0,
+      lines: cart, cashierName: profile.name, clientId, createdAt,
+    };
+    const lines = cart.map((l) => ({
+      id: l.id, cat: l.cat, name: l.name, price: l.price, qty: l.qty,
+      terapis: therapists.find((t) => String(t.id) === l.terapis)?.name ?? null,
+    }));
+    const reset = () => {
       setCart([]); setCust(''); setWa(''); setDisc(''); setCashIn(''); setPay('Tunai');
       setCartOpen(false);
+    };
+    try {
+      let tx: Tx;
+      try {
+        tx = await createTransaction(input);
+      } catch (e) {
+        if (!isNetworkError(e)) throw e;
+        // Tanpa koneksi: simpan di perangkat, dikirim otomatis saat online lagi.
+        await enqueue({ ...input, userId: profile.id });
+        tx = {
+          id: -1, no: 'OFFLINE-' + clientId.slice(0, 6).toUpperCase(), at: createdAt, cust: input.customer, wa: input.wa,
+          sub, disc: discount, total, pay, cash: input.cash, kasir: profile.name, lines: [],
+        };
+        toast('Tidak ada koneksi. Transaksi disimpan di perangkat dan dikirim otomatis saat online.');
+        onQueued();
+      }
+      tx.lines = lines;
+      reset();
       setReceipt(tx);
       onPaid();
     } catch (e) {

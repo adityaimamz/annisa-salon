@@ -1,7 +1,7 @@
 import type { Session } from '@supabase/supabase-js';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  deleteItem, loadCatalog, loadProfile, loadTherapists, saveItem, signOut,
+  createTransaction, deleteItem, loadCatalog, loadProfile, loadTherapists, saveItem, signOut,
 } from './api';
 import GaleriView from './GaleriView';
 import HargaView from './HargaView';
@@ -9,6 +9,7 @@ import KaryawanView from './KaryawanView';
 import KasirView from './KasirView';
 import KeuanganView from './KeuanganView';
 import Login from './Login';
+import { cacheGet, cacheSet, dequeue, enqueue, isNetworkError, listQueue } from './offline';
 import TransaksiView from './TransaksiView';
 import type { Category, Item, Profile, Therapist } from './types';
 import { ConfirmProvider, Icon, ToastProvider, useToast } from './ui';
@@ -56,14 +57,66 @@ function Shell({ userId }: { userId: string }) {
   const [error, setError] = useState('');
   const [view, setView] = useState<View>('kasir');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [online, setOnline] = useState(() => navigator.onLine);
+  const [pending, setPending] = useState(0);
+  const [rejected, setRejected] = useState(0);
+  const flushing = useRef(false);
+
+  const flush = useCallback(async () => {
+    if (flushing.current) return;
+    flushing.current = true;
+    try {
+      let sent = 0;
+      for (const q of await listQueue(userId)) {
+        if (q.error) continue;
+        try {
+          await createTransaction(q);
+          await dequeue(q.clientId);
+          sent++;
+        } catch (e) {
+          if (isNetworkError(e)) break;
+          await enqueue({ ...q, error: (e as Error).message }); // ditolak server: simpan, jangan hilang
+        }
+      }
+      const left = (await listQueue(userId));
+      setPending(left.filter((t) => !t.error).length);
+      setRejected(left.filter((t) => t.error).length);
+      if (sent) {
+        setRefreshKey((k) => k + 1);
+        toast(`${sent} transaksi offline berhasil dikirim`);
+      }
+    } catch { /* IndexedDB tidak tersedia: abaikan */ } finally {
+      flushing.current = false;
+    }
+  }, [userId, toast]);
+
+  useEffect(() => {
+    const on = () => { setOnline(true); flush(); };
+    const off = () => setOnline(false);
+    window.addEventListener('online', on);
+    window.addEventListener('offline', off);
+    const t = setInterval(() => { if (navigator.onLine) flush(); }, 20000);
+    flush();
+    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); clearInterval(t); };
+  }, [flush]);
 
   useEffect(() => {
     (async () => {
       try {
-        const p = await loadProfile(userId);
-        if (!p) throw new Error('Akun tidak aktif atau profil tidak ditemukan. Hubungi pemilik salon.');
-        const [c, t] = await Promise.all([loadCatalog(), loadTherapists()]);
-        setProfile(p); setCats(c.cats); setItems(c.items); setTherapists(t);
+        let boot: { p: Profile; c: { cats: Category[]; items: Item[] }; t: Therapist[] };
+        try {
+          const p = await loadProfile(userId);
+          if (!p) throw new Error('Akun tidak aktif atau profil tidak ditemukan. Hubungi pemilik salon.');
+          const [c, t] = await Promise.all([loadCatalog(), loadTherapists()]);
+          boot = { p, c, t };
+          cacheSet('boot:' + userId, boot);
+        } catch (e) {
+          // Offline: pakai data terakhir yang tersimpan di perangkat.
+          const cached = isNetworkError(e) ? await cacheGet<typeof boot>('boot:' + userId) : undefined;
+          if (!cached) throw e;
+          boot = cached;
+        }
+        setProfile(boot.p); setCats(boot.c.cats); setItems(boot.c.items); setTherapists(boot.t);
         setReady(true);
       } catch (e) {
         setError((e as Error).message);
@@ -121,11 +174,18 @@ function Shell({ userId }: { userId: string }) {
       </aside>
 
       <main className="main">
+        {(!online || pending > 0 || rejected > 0) && (
+          <div className="sync-pill" role="status">
+            {!online ? 'Offline' : 'Online'}
+            {pending > 0 && ` · ${pending} transaksi menunggu dikirim`}
+            {rejected > 0 && ` · ${rejected} ditolak server (hubungi pemilik)`}
+          </div>
+        )}
         <div className="mobile-banner"><strong>An-Nisa · {profile.name}</strong>
           <span className="banner-links"><a href="/">Ke website</a><button type="button" onClick={logout}>Keluar</button></span>
         </div>
         <div hidden={current !== 'kasir'} style={{ height: '100%' }}>
-          <KasirView cats={cats} items={items} therapists={therapists} profile={profile} onPaid={() => setRefreshKey((k) => k + 1)} />
+          <KasirView cats={cats} items={items} therapists={therapists} profile={profile} onPaid={() => setRefreshKey((k) => k + 1)} onQueued={flush} />
         </div>
         {current === 'transaksi' && <TransaksiView refreshKey={refreshKey} />}
         {current === 'keuangan' && <KeuanganView cats={cats} refreshKey={refreshKey} />}

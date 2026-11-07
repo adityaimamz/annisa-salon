@@ -481,3 +481,11 @@ body{background:var(--paper);font-size:15px;overflow:hidden}
 .gl-note{font-size:12.5px;color:var(--ink-3);margin-top:8px;line-height:1.5}
 .gl-addcat{display:flex;gap:8px;margin-top:10px}
 .gl-addcat .input{flex:1;min-width:0}
+
+/* indikator offline / antrean sinkron */
+.sync-pill{position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:60;
+  background:var(--ink);color:var(--cream);font-size:13px;font-weight:500;padding:8px 14px;border-radius:999px;
+  max-width:calc(100vw - 32px);text-align:center;box-shadow:0 6px 20px rgba(0,0,0,.2);animation:pill-in .25s var(--ease-out)}
+@media (min-width:900px){.sync-pill{bottom:20px}}
+@keyframes pill-in{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
+@media (prefers-reduced-motion:reduce){.sync-pill{animation:none}}

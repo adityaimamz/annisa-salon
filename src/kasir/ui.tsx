@@ -294,6 +294,11 @@ export function ReceiptSheet({ tx, fresh, onClose }: { tx: Tx | null; fresh: boo
             </div>
           )}
           <h3 id="okTitle">{fresh ? 'Pembayaran berhasil' : 'Detail transaksi'}</h3>
+          {t.no.startsWith('OFFLINE-') && (
+            <p style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--ink-2)' }}>
+              Tersimpan di perangkat. Nomor struk resmi dibuat setelah terkirim saat online.
+            </p>
+          )}
           <div className="receipt">
             <div className="c"><b>AN-NISA MUSLIMAH SALON</b><br />Jl. Teuku Umar No.58, Tegal<br />0857-2895-8582</div>
             <hr />
