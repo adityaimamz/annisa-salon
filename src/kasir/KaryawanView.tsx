@@ -1,15 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
 import { createStaff, deleteStaff, listStaff, resetStaffPassword, setStaffActive } from './api';
-import type { StaffMember } from './types';
+import TerapisPanel from './TerapisPanel';
+import type { StaffMember, Therapist } from './types';
 import { CloseBtn, Sheet, useConfirm, useToast } from './ui';
 
 const ALPHABET = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const genPassword = () =>
   Array.from(crypto.getRandomValues(new Uint8Array(10)), (b) => ALPHABET[b % ALPHABET.length]).join('');
 
-export default function KaryawanView() {
+export default function KaryawanView({ onTherapists }: { onTherapists: (active: Therapist[]) => void }) {
   const toast = useToast();
   const confirm = useConfirm();
+  const [tab, setTab] = useState<'akun' | 'terapis'>('akun');
+  const [addingT, setAddingT] = useState(false);
   const [staff, setStaff] = useState<StaffMember[] | null>(null);
   const [adding, setAdding] = useState(false);
   const [resetting, setResetting] = useState<StaffMember | null>(null);
@@ -51,10 +54,19 @@ export default function KaryawanView() {
     <section className="view" aria-label="Karyawan">
       <div className="v-head">
         <div><h1>Karyawan</h1>
-          <p className="meta">Karyawan hanya bisa memakai Kasir dan melihat daftar Harga.</p></div>
-        <button className="btn btn-green btn-sm" type="button" onClick={() => setAdding(true)}>+ Tambah karyawan</button>
+          <p className="meta">{tab === 'akun'
+            ? 'Karyawan hanya bisa memakai Kasir dan melihat daftar Harga.'
+            : 'Terapis yang bisa dipilih untuk setiap layanan di Kasir.'}</p></div>
+        <div className="seg" role="group" aria-label="Bagian">
+          <button type="button" aria-pressed={tab === 'akun'} onClick={() => setTab('akun')}>Akun</button>
+          <button type="button" aria-pressed={tab === 'terapis'} onClick={() => setTab('terapis')}>Terapis</button>
+        </div>
+        <button className="btn btn-green btn-sm" type="button" onClick={() => (tab === 'akun' ? setAdding(true) : setAddingT(true))}>
+          {tab === 'akun' ? '+ Tambah karyawan' : '+ Tambah terapis'}
+        </button>
       </div>
-      <div className="pad">
+      {tab === 'terapis' && <TerapisPanel adding={addingT} onAddClose={() => setAddingT(false)} onChanged={onTherapists} />}
+      <div className="pad" hidden={tab !== 'akun'}>
         {staff === null ? <p className="empty-cart">Memuat…</p> : (
           <div className="pr-card">
             {(staff ?? []).map((m) => (

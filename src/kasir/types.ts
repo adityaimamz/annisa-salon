@@ -50,6 +50,9 @@ export interface TxLine {
   price: number;
   qty: number;
   terapis: string | null;
+  /** hanya terisi untuk transaksi yang dibaca dari server (dipakai saat edit) */
+  rowId?: number;
+  terapisId?: number | null;
 }
 
 export interface Tx {

@@ -63,19 +63,52 @@ export async function loadTherapists(): Promise<Therapist[]> {
   return data as Therapist[];
 }
 
+/* Kelola terapis (hanya owner; ditegakkan RLS `therapists_owner`) */
+export async function listTherapistsAll(): Promise<(Therapist & { active: boolean })[]> {
+  const { data, error } = await db().from('therapists').select('id,name,active').order('id');
+  fail(error);
+  return data as (Therapist & { active: boolean })[];
+}
+
+const therapistErr = (e: { message: string; code?: string }) => {
+  if (e.code === '23505') throw new Error('Nama terapis itu sudah ada.');
+  if (e.code === '23503') throw new Error('Terapis ini sudah tercatat di transaksi, tidak bisa dihapus. Nonaktifkan saja.');
+  throw new Error(e.message);
+};
+
+export async function addTherapist(name: string) {
+  const { error } = await db().from('therapists').insert({ name });
+  if (error) therapistErr(error);
+}
+
+export async function renameTherapist(id: number, name: string) {
+  const { error } = await db().from('therapists').update({ name }).eq('id', id);
+  if (error) therapistErr(error);
+}
+
+export async function setTherapistActive(id: number, active: boolean) {
+  const { error } = await db().from('therapists').update({ active }).eq('id', id);
+  if (error) therapistErr(error);
+}
+
+export async function deleteTherapist(id: number) {
+  const { error } = await db().from('therapists').delete().eq('id', id);
+  if (error) therapistErr(error);
+}
+
 /* ---------- transaksi ---------- */
 interface TxRow {
   id: number; no: string; created_at: string; customer: string | null; customer_wa: string | null;
   subtotal: number; discount: number; total: number; pay_method: PayMethod; cash_received: number | null;
   profiles: { name: string } | null;
   transaction_items: {
-    catalog_item_id: string | null; category_id: string | null; name: string; price: number; qty: number;
-    therapists: { name: string } | null;
+    id: number; catalog_item_id: string | null; category_id: string | null; name: string; price: number; qty: number;
+    therapist_id: number | null; therapists: { name: string } | null;
   }[];
 }
 
 const SELECT_TX =
-  '*, profiles:cashier_id(name), transaction_items(catalog_item_id,category_id,name,price,qty,therapists:therapist_id(name))';
+  '*, profiles:cashier_id(name), transaction_items(id,catalog_item_id,category_id,name,price,qty,therapist_id,therapists:therapist_id(name))';
 
 const txFromRow = (r: TxRow): Tx => ({
   id: r.id, no: r.no, at: new Date(r.created_at).getTime(), cust: r.customer ?? '', wa: r.customer_wa ?? '',
@@ -83,9 +116,30 @@ const txFromRow = (r: TxRow): Tx => ({
   kasir: r.profiles?.name ?? '-',
   lines: r.transaction_items.map((l): TxLine => ({
     id: l.catalog_item_id, cat: l.category_id, name: l.name, price: l.price, qty: l.qty,
-    terapis: l.therapists?.name ?? null,
+    terapis: l.therapists?.name ?? null, rowId: l.id, terapisId: l.therapist_id,
   })),
 });
+
+/** Koreksi transaksi (owner; ditegakkan RLS): hanya data pelanggan dan terapis, nominal tidak diubah. */
+export async function updateTransaction(
+  id: number, p: { customer: string; wa: string; lines: { rowId: number; terapisId: number | null }[] },
+) {
+  const t = await db().from('transactions')
+    .update({ customer: p.customer || null, customer_wa: p.wa || null }).eq('id', id).select('id');
+  fail(t.error);
+  if (!t.data?.length) throw new Error('Transaksi tidak ditemukan atau Anda tidak berhak mengubahnya.');
+  for (const l of p.lines) {
+    const r = await db().from('transaction_items').update({ therapist_id: l.terapisId }).eq('id', l.rowId).select('id');
+    fail(r.error);
+    if (!r.data?.length) throw new Error('Sebagian baris gagal diubah. Muat ulang lalu coba lagi.');
+  }
+}
+
+export async function deleteTransaction(id: number) {
+  const { data, error } = await db().from('transactions').delete().eq('id', id).select('id');
+  fail(error);
+  if (!data?.length) throw new Error('Transaksi tidak ditemukan atau Anda tidak berhak menghapusnya.');
+}
 
 const PAGE = 1000;
 

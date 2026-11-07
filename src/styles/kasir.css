@@ -134,6 +134,9 @@ body{background:var(--paper);font-size:15px;overflow:hidden}
 .rowx.total{font-size:15px;color:var(--ink)}
 .rowx.total b{font-size:24px}
 .disc{width:120px;height:34px;text-align:right;font-variant-numeric:tabular-nums;font-size:14px}
+.disc-ctl{display:inline-flex;align-items:center;gap:8px}
+.seg-sm button{height:28px;padding:0 10px;font-size:13px}
+.disc-note{font-size:13px;color:var(--ink-3);margin-top:-6px}
 .pay{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .pay label{position:relative}
 .pay input{position:absolute;opacity:0}
@@ -359,6 +362,7 @@ body{background:var(--paper);font-size:15px;overflow:hidden}
   .cash .quick button{height:40px;padding:0 14px}
   .pay span{height:44px}
   .seg button{height:40px}
+  .seg-sm button{height:34px}
   .linkbtn{padding:10px 0}
 }
 @media (max-width:600px){

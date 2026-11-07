@@ -31,6 +31,7 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
   const [cust, setCust] = useState('');
   const [wa, setWa] = useState('');
   const [disc, setDisc] = useState('');
+  const [discMode, setDiscMode] = useState<'rp' | 'pct'>('rp');
   const [cashIn, setCashIn] = useState('');
   const [pay, setPay] = useState<PayMethod>('Tunai');
   const [variantItem, setVariantItem] = useState<Item | null>(null);
@@ -49,7 +50,9 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
     cat === 'all' && !q ? cats.map((c) => [c, list.filter((i) => i.cat === c.id)]) : [[null, list]];
 
   const sub = cart.reduce((a, l) => a + l.price * l.qty, 0);
-  const discount = Math.min(num(disc), sub);
+  const discount = discMode === 'pct'
+    ? Math.round((sub * Math.min(num(disc), 100)) / 100)
+    : Math.min(num(disc), sub);
   const total = sub - discount;
   const count = cart.reduce((a, l) => a + l.qty, 0);
   const cash = num(cashIn);
@@ -106,7 +109,7 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
       terapis: therapists.find((t) => String(t.id) === l.terapis)?.name ?? null,
     }));
     const reset = () => {
-      setCart([]); setCust(''); setWa(''); setDisc(''); setCashIn(''); setPay('Tunai');
+      setCart([]); setCust(''); setWa(''); setDisc(''); setDiscMode('rp'); setCashIn(''); setPay('Tunai');
       setCartOpen(false);
     };
     try {
@@ -214,7 +217,17 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
           <div className="cart-foot">
             <div className="rowx"><span>Subtotal</span><b>{rp(sub)}</b></div>
             <div className="rowx"><label htmlFor="disc">Diskon</label>
-              <input className="input disc" id="disc" inputMode="numeric" placeholder="0" value={disc} onChange={(e) => setDisc(money(num(e.target.value)))} /></div>
+              <span className="disc-ctl">
+                <span className="seg seg-sm" role="group" aria-label="Jenis diskon">
+                  <button type="button" aria-pressed={discMode === 'rp'} onClick={() => { setDiscMode('rp'); setDisc(''); }}>Rp</button>
+                  <button type="button" aria-pressed={discMode === 'pct'} onClick={() => { setDiscMode('pct'); setDisc(''); }}>%</button>
+                </span>
+                <input className="input disc" id="disc" inputMode="numeric" placeholder="0" value={disc}
+                  onChange={(e) => setDisc(discMode === 'pct' ? String(Math.min(num(e.target.value), 100) || '') : money(num(e.target.value)))} />
+              </span></div>
+            {discMode === 'pct' && discount > 0 && (
+              <div className="rowx disc-note"><span>Potongan {num(disc)}%</span><b>-{rp(discount)}</b></div>
+            )}
             <div className="rowx total"><span>Total</span><b>{rp(total)}</b></div>
             <div className="pay" role="radiogroup" aria-label="Metode bayar">
               {(['Tunai', 'QRIS', 'Transfer'] as PayMethod[]).map((m) => (

@@ -279,7 +279,9 @@ function receiptText(t: Tx) {
   ].filter((x) => x !== null).join('\n');
 }
 
-export function ReceiptSheet({ tx, fresh, onClose }: { tx: Tx | null; fresh: boolean; onClose: () => void }) {
+export function ReceiptSheet({ tx, fresh, onClose, onEdit, onDelete }: {
+  tx: Tx | null; fresh: boolean; onClose: () => void; onEdit?: (t: Tx) => void; onDelete?: (t: Tx) => void;
+}) {
   const t = tx;
   const wa = (t?.wa ?? '').replace(/\D/g, '').replace(/^0/, '62');
   const href = t ? `https://wa.me/${wa}?text=${encodeURIComponent(receiptText(t))}` : '#';
@@ -327,6 +329,8 @@ export function ReceiptSheet({ tx, fresh, onClose }: { tx: Tx | null; fresh: boo
           <div className="sheet-actions">
             <a className="btn btn-line" href={href} target="_blank" rel="noopener">Kirim struk ke WhatsApp</a>
             {fresh && <button className="btn btn-green" type="button" onClick={onClose}>Transaksi baru</button>}
+            {!fresh && onEdit && <button className="btn btn-line" type="button" onClick={() => onEdit(t)}>Edit terapis &amp; pelanggan</button>}
+            {!fresh && onDelete && <button className="btn btn-line btn-danger" type="button" onClick={() => onDelete(t)}>Hapus transaksi</button>}
           </div>
         </div>
       )}
