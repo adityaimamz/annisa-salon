@@ -3,6 +3,7 @@ interface Props {
   title: string;
   description?: string;
   ogImage?: string;
+  ogImageAlt?: string;
   ogTitle?: string;
   ogDescription?: string;
   noindex?: boolean;
@@ -12,14 +13,18 @@ interface Props {
 const {
   title,
   description,
-  ogImage,
-  ogTitle,
-  ogDescription,
+  ogImage = '/og-image.jpg',
+  ogImageAlt = 'Logo An-Nisa Muslimah Salon',
+  ogTitle = title,
+  ogDescription = description,
   noindex = false,
   themeColor = '#1D4D3A',
   jsonLd,
 } = Astro.props;
-const ogImageUrl = ogImage && Astro.site ? new URL(ogImage, Astro.site).href : ogImage;
+// WhatsApp/Facebook butuh URL absolut, jadi `site` di astro.config harus terisi saat build.
+const abs = (path: string) => (Astro.site ? new URL(path, Astro.site).href : path);
+const ogImageUrl = abs(ogImage);
+const pageUrl = Astro.site ? new URL(Astro.url.pathname, Astro.site).href : undefined;
 ---
 <!doctype html>
 <html lang="id">
@@ -30,9 +35,22 @@ const ogImageUrl = ogImage && Astro.site ? new URL(ogImage, Astro.site).href : o
     {description && <meta name="description" content={description} />}
     <meta name="theme-color" content={themeColor} />
     {noindex && <meta name="robots" content="noindex" />}
-    {ogTitle && <meta property="og:title" content={ogTitle} />}
-    {ogDescription && <meta property="og:description" content={ogDescription} />}
-    {ogImageUrl && <meta property="og:image" content={ogImageUrl} />}
+    {pageUrl && !noindex && <link rel="canonical" href={pageUrl} />}
+    {!noindex && (
+      <>
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="An-Nisa Muslimah Salon" />
+        <meta property="og:locale" content="id_ID" />
+        <meta property="og:title" content={ogTitle} />
+        {ogDescription && <meta property="og:description" content={ogDescription} />}
+        {pageUrl && <meta property="og:url" content={pageUrl} />}
+        <meta property="og:image" content={ogImageUrl} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:image:alt" content={ogImageAlt} />
+        <meta name="twitter:card" content="summary_large_image" />
+      </>
+    )}
     <link rel="icon" type="image/png" href="/assets/mark.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
