@@ -102,23 +102,22 @@ export default function PengeluaranView({ refreshKey }: { refreshKey: number }) 
             <div><label htmlFor="pgTo">Sampai</label><input className="input" id="pgTo" type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} /></div>
           </div>
         )}
-        <div className="field row2" style={{ marginBottom: 12 }}>
-          <input className="input" type="search" placeholder="Cari keterangan atau kategori" aria-label="Cari" value={q} onChange={(e) => setQ(e.target.value)} />
-          <Select ariaLabel="Kategori" value={cat} onChange={setCat} placeholder="Semua kategori"
+        <div className="flt">
+          <input className="input flt-q" type="search" placeholder="Cari keterangan atau kategori" aria-label="Cari" value={q} onChange={(e) => setQ(e.target.value)} />
+          <Select className="input" ariaLabel="Kategori" value={cat} onChange={setCat} placeholder="Semua kategori"
             options={[{ value: '', label: 'Semua kategori' }, ...cats.map((c) => ({ value: c, label: c }))]} />
-        </div>
-        <div className="field row2" style={{ marginBottom: 16 }}>
-          <input className="input" inputMode="numeric" placeholder="Nominal minimal, misal 100.000" aria-label="Nominal minimal" value={minAmt}
-            onChange={(e) => { const n = Number(e.target.value.replace(/\D/g, '')); setMinAmt(n ? n.toLocaleString('id-ID') : ''); }} />
-          <Select ariaLabel="Urutan" value={sort} onChange={(v) => setSort(v as Sort)}
+          <Select className="input" ariaLabel="Urutan" value={sort} onChange={(v) => setSort(v as Sort)}
             options={[{ value: 'new', label: 'Terbaru' }, { value: 'old', label: 'Terlama' }, { value: 'big', label: 'Nominal terbesar' }, { value: 'small', label: 'Nominal terkecil' }]} />
+          <input className="input" inputMode="numeric" placeholder="Minimal Rp" aria-label="Nominal minimal" value={minAmt}
+            onChange={(e) => { const n = Number(e.target.value.replace(/\D/g, '')); setMinAmt(n ? n.toLocaleString('id-ID') : ''); }} />
+          {filtered && <button className="linkbtn" type="button" onClick={() => { setQ(''); setCat(''); setMinAmt(''); }}>Reset</button>}
         </div>
 
         {perCat.length > 1 && (
-          <div className="chips" style={{ marginBottom: 16 }}>
+          <div className="cat-sum" role="group" aria-label="Ringkasan per kategori">
             {perCat.map(({ c, v }) => (
-              <button key={c} type="button" className="pick" style={{ background: cat === c ? 'var(--green)' : 'var(--line)', color: cat === c ? 'var(--cream)' : 'var(--ink)' }}
-                onClick={() => setCat(cat === c ? '' : c)}>{c} · {rp(v)}</button>
+              <button key={c} type="button" className="cat-pill" aria-pressed={cat === c} onClick={() => setCat(cat === c ? '' : c)}>
+                {c} <b>{rp(v)}</b></button>
             ))}
           </div>
         )}

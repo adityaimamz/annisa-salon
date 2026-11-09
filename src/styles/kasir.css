@@ -496,3 +496,20 @@ body{background:var(--paper);font-size:15px;overflow:hidden}
 @media (min-width:900px){.sync-pill{bottom:20px}}
 @keyframes pill-in{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
 @media (prefers-reduced-motion:reduce){.sync-pill{animation:none}}
+
+/* ---------- filter halaman Pengeluaran ---------- */
+.flt{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:14px}
+.flt > .input{flex:1 1 150px;min-width:0;height:44px;padding:0 14px}
+.flt > .flt-q{flex:2 1 240px}
+.flt > .linkbtn{flex:none}
+.cat-sum{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.cat-pill{
+  display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;cursor:pointer;
+  border:1px solid var(--line-strong);background:transparent;color:var(--ink-2);font:inherit;font-size:13px;
+  transition:background-color .15s,color .15s,border-color .15s,transform 160ms var(--ease-out);
+}
+.cat-pill b{font-weight:600;color:var(--ink)}
+.cat-pill:hover{border-color:var(--ink)}
+.cat-pill:active{transform:scale(.97)}
+.cat-pill[aria-pressed="true"]{background:var(--green);border-color:var(--green);color:var(--cream)}
+.cat-pill[aria-pressed="true"] b{color:var(--cream)}
