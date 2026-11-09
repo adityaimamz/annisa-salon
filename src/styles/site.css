@@ -225,29 +225,35 @@ button,input,select,textarea{font:inherit;color:inherit}
 .lb-btn:hover{background:rgba(244,239,228,.1)}
 
 /* ---------- menu ---------- */
-.menu{border-top:1px solid var(--ink)}
-.menu-group{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding:36px 0 40px;border-bottom:1px solid var(--line)}
-.menu-group > *{min-width:0}
-@media (min-width:880px){.menu-group{grid-template-columns:300px minmax(0,1fr);gap:48px}}
-.menu-cat h3{font-family:var(--serif);font-weight:400;font-size:32px;line-height:1.05}
-.menu-cat p{color:var(--ink-3);font-size:14.5px;margin-top:6px;max-width:250px}
+/* Tab kategori dibuat otomatis dari data; satu panel tampil sekaligus. */
+.menu-tabs{margin-bottom:0;padding-bottom:20px}
+.menu-panel{border-top:1px solid var(--ink);padding-top:8px}
+.menu-panel:not([hidden]){animation:menu-in 220ms var(--ease-out)}
+@keyframes menu-in{from{opacity:0;transform:translateY(6px)}}
 .menu-list{list-style:none}
-.menu-list li + li{border-top:1px dashed var(--line)}
+.menu-list li{border-bottom:1px dashed var(--line);break-inside:avoid}
+/* Dua kolom di layar lebar, dibaca dari atas ke bawah seperti menu cetak */
+@media (min-width:880px){.menu-list{columns:2;column-gap:56px}}
+.menu-panel:not(.all) li.extra{display:none}
+.menu-more{all:unset;cursor:pointer;margin-top:24px;display:inline-flex;font-weight:600;font-size:15px;border-bottom:1px solid currentColor;padding-bottom:2px}
+.menu-more:focus-visible{outline:2px solid var(--green);outline-offset:3px;border-radius:2px}
 .menu-item{
-  display:grid;grid-template-columns:1fr auto;gap:2px 24px;align-items:baseline;
-  padding:16px 0;
+  display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 20px;align-items:baseline;
+  padding:15px 0;
 }
-.menu-item .m-name{font-weight:600;font-size:17px}
-.menu-item .m-desc{grid-column:1;color:var(--ink-2);font-size:14.5px;line-height:1.5}
+.menu-item .m-name{font-weight:600;font-size:16.5px}
+.menu-item .m-desc,.menu-item .m-vars{grid-column:1 / -1;color:var(--ink-2);font-size:14px;line-height:1.5}
+.menu-item .m-vars{display:flex;flex-wrap:wrap;gap:2px 16px;margin-top:2px;font-variant-numeric:tabular-nums}
+.menu-item .m-vars b{font-weight:600;color:var(--ink)}
 .menu-item .m-price{
-  grid-row:1;grid-column:2;font-size:14px;font-weight:600;color:var(--green);
-  display:inline-flex;align-items:center;gap:6px;
+  grid-row:1;grid-column:2;font-size:14px;font-weight:600;color:var(--green);white-space:nowrap;
 }
-.menu-item .m-price.fixed{font-size:17px;color:var(--ink);font-variant-numeric:tabular-nums}
+.menu-item .m-price.fixed{font-size:16.5px;color:var(--ink);font-variant-numeric:tabular-nums}
+.menu-item .m-price small{font-size:12.5px;font-weight:400;color:var(--ink-3)}
 a.menu-item:hover .m-name{text-decoration:underline;text-underline-offset:4px;text-decoration-thickness:1px}
 a.menu-item:hover .m-price{color:var(--green-hover)}
 .m-name .by{font-weight:400;color:var(--ink-3)}
-.brand-table{margin-top:28px;padding-top:24px;border-top:1px solid var(--line)}
+.brand-table{margin-top:36px}
 .bt-title{font-weight:600;font-size:17px;margin-bottom:12px}
 .bt-scroll{overflow-x:auto;margin:0 calc(var(--gutter)*-1);padding:0 var(--gutter)}
 .brand-table table{width:100%;min-width:520px;border-collapse:collapse;font-size:15px;font-variant-numeric:tabular-nums}
@@ -518,4 +524,5 @@ select.input{appearance:none;-webkit-appearance:none;background-image:url("data:
   .drawer[open]{opacity:1}
   @starting-style{.drawer[open]{opacity:0;transform:none}}
   .lb-stage{transform:none;transition:none}
+  .menu-panel:not([hidden]){animation-name:fade}
 }

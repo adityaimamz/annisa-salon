@@ -157,12 +157,18 @@ const jsonLd = {
         <p class="kicker">Layanan</p>
         <h2 class="h2">Menu perawatan.</h2>
       </div>
-      <p class="sub">Harga perawatan rambut tergantung panjang dan kondisinya. Ketuk layanan yang kamu mau, WhatsApp terbuka dengan pertanyaannya sudah tertulis.</p>
+      <p class="sub">Harga rambut mengikuti panjangnya. Ketuk layanan yang kamu mau, WhatsApp terbuka dengan pertanyaannya sudah tertulis.</p>
     </div>
 
-    <div class="menu">
-      <div class="menu-group" data-reveal>
-        <div class="menu-cat"><h3>Rambut</h3><p>Dari rapikan ujung sampai ganti warna.</p></div>
+    <div class="menu" data-reveal>
+      <div class="tabs menu-tabs" aria-label="Kategori layanan">
+        <button type="button" class="tab" data-cat="rambut" aria-pressed="true">Rambut<span class="n">6</span></button>
+        <button type="button" class="tab" data-cat="wajah" aria-pressed="false">Wajah<span class="n">7</span></button>
+        <button type="button" class="tab" data-cat="badan" aria-pressed="false">Badan<span class="n">3</span></button>
+        <button type="button" class="tab" data-cat="kuku" aria-pressed="false">Kuku<span class="n">3</span></button>
+        <button type="button" class="tab" data-cat="anak" aria-pressed="false">Anak<span class="n">1</span></button>
+      </div>
+      <div class="menu-panel" data-cat="rambut">
         <ul class="menu-list">
           <li><a class="menu-item" data-ask="Smoothing" href="https://wa.me/6285728958582"><span class="m-name">Smoothing</span><span class="m-price">Tanya harga →</span><span class="m-desc">Rambut jadi lurus, jatuh, dan gampang diatur.</span></a></li>
           <li><a class="menu-item" data-ask="Hair coloring" href="https://wa.me/6285728958582"><span class="m-name">Coloring</span><span class="m-price">Tanya harga →</span><span class="m-desc">Warna penuh, highlight, atau ombre.</span></a></li>
@@ -172,10 +178,7 @@ const jsonLd = {
           <li><a class="menu-item" data-ask="Hair spa" href="https://wa.me/6285728958582"><span class="m-name">Hair spa</span><span class="m-price">Tanya harga →</span><span class="m-desc">Untuk rambut kering, kusam, atau habis diwarnai.</span></a></li>
         </ul>
       </div>
-
-      <div class="menu-group" data-reveal>
-        <div class="menu-cat"><h3>Wajah</h3><p>Pilih merek produk yang biasa kamu pakai.</p></div>
-        <div>
+      <div class="menu-panel" data-cat="wajah" hidden>
           <ul class="menu-list">
             <li><a class="menu-item" data-ask="Facial reguler" href="https://wa.me/6285728958582"><span class="m-name">Facial reguler</span><span class="m-price fixed">55rb</span><span class="m-desc">Membersihkan komedo dan sisa makeup, ditutup masker.</span></a></li>
             <li><a class="menu-item" data-ask="Facial detox" href="https://wa.me/6285728958582"><span class="m-name">Facial detox</span><span class="m-price fixed">150rb</span><span class="m-desc">Pembersihan mendalam dengan alat detox. Untuk komedo, jerawat, minyak berlebih, dan pori-pori.</span></a></li>
@@ -202,29 +205,22 @@ const jsonLd = {
             </div>
             <p class="bt-note">Brightening, anti aging, collagen, dan acne harganya sama di tiap merek.</p>
           </div>
-        </div>
       </div>
-
-      <div class="menu-group" data-reveal>
-        <div class="menu-cat"><h3>Badan</h3><p>Di ruang spa terpisah.</p></div>
+      <div class="menu-panel" data-cat="badan" hidden>
         <ul class="menu-list">
           <li><a class="menu-item" data-ask="Lulur" href="https://wa.me/6285728958582"><span class="m-name">Lulur</span><span class="m-price">Tanya harga →</span><span class="m-desc">Mengangkat kulit mati, kulit lebih halus.</span></a></li>
           <li><a class="menu-item" data-ask="Body massage" href="https://wa.me/6285728958582"><span class="m-name">Body massage</span><span class="m-price">Tanya harga →</span><span class="m-desc">Pijat seluruh badan untuk yang pegal-pegal.</span></a></li>
           <li><a class="menu-item" data-ask="Body whitening" href="https://wa.me/6285728958582"><span class="m-name">Whitening</span><span class="m-price">Tanya harga →</span><span class="m-desc">Perawatan untuk mencerahkan kulit badan.</span></a></li>
         </ul>
       </div>
-
-      <div class="menu-group" data-reveal>
-        <div class="menu-cat"><h3>Kuku</h3></div>
+      <div class="menu-panel" data-cat="kuku" hidden>
         <ul class="menu-list">
           <li><a class="menu-item" data-ask="Manicure" href="https://wa.me/6285728958582"><span class="m-name">Manicure</span><span class="m-price">Tanya harga →</span><span class="m-desc">Kuku tangan dibersihkan, dibentuk, dan diwarnai.</span></a></li>
           <li><a class="menu-item" data-ask="Pedicure" href="https://wa.me/6285728958582"><span class="m-name">Pedicure</span><span class="m-price">Tanya harga →</span><span class="m-desc">Sama, untuk kuku kaki.</span></a></li>
           <li><a class="menu-item" data-ask="Nail art" href="https://wa.me/6285728958582"><span class="m-name">Nail art</span><span class="m-price">Tanya harga →</span><span class="m-desc">Bawa contoh motif yang kamu suka.</span></a></li>
         </ul>
       </div>
-
-      <div class="menu-group" data-reveal>
-        <div class="menu-cat"><h3>Anak</h3></div>
+      <div class="menu-panel" data-cat="anak" hidden>
         <ul class="menu-list">
           <li><a class="menu-item" data-ask="Spa kids" href="https://wa.me/6285728958582"><span class="m-name">Spa kids</span><span class="m-price fixed">Rp65.000</span><span class="m-desc">Body massage dan scrub khusus anak. Bisa sambil ibunya perawatan.</span></a></li>
         </ul>
@@ -448,6 +444,19 @@ import { loadGalleryHtml } from '../lib/galeri';
   }
   chipsEl.addEventListener('change', syncPicked);
 
+  // Menu perawatan: tab kategori + "Lihat semua" (delegasi, karena isi menu diganti setelah fetch)
+  document.querySelector('.menu')?.addEventListener('click', (e) => {
+    const menu = e.currentTarget;
+    const tab = e.target.closest('.menu-tabs .tab');
+    if (tab) {
+      menu.querySelectorAll('.menu-tabs .tab').forEach((t) => t.setAttribute('aria-pressed', String(t === tab)));
+      menu.querySelectorAll('.menu-panel').forEach((p) => { p.hidden = p.dataset.cat !== tab.dataset.cat; });
+      return;
+    }
+    const more = e.target.closest('.menu-more');
+    if (more) { more.closest('.menu-panel').classList.add('all'); more.remove(); }
+  });
+
   // Service rows -> WhatsApp with prefilled question
   const wireAsk = (root) => root.querySelectorAll('.menu-item[data-ask]').forEach((a) => {
     a.href = waLink(`Assalamualaikum kak, mau tanya harga ${a.dataset.ask} di An-Nisa Muslimah Salon.`);
@@ -481,14 +490,10 @@ import { loadGalleryHtml } from '../lib/galeri';
     // Pilihan perawatan di form booking ikut katalog yang sama
     const chips = document.getElementById('chips');
     if (chips && loaded.chips) { chips.innerHTML = loaded.chips; chips.classList.add('grouped'); syncPicked(); }
-    const seen = [...menu.children].map((g) => g.classList.contains('in'));
+    // tab yang sedang dibuka pengunjung dipertahankan setelah isi diganti data terbaru
+    const cur = menu.querySelector('.menu-tabs .tab[aria-pressed="true"]')?.dataset.cat;
     menu.innerHTML = html;
-    [...menu.children].forEach((g, i) => {
-      // grup yang sudah sempat muncul tidak dianimasikan ulang (hindari berkedip)
-      if (seen[i]) { g.classList.add('in'); return; }
-      g.setAttribute('data-reveal', '');
-      io.observe(g);
-    });
+    menu.querySelector(`.menu-tabs .tab[data-cat="${cur}"]`)?.click();
     wireAsk(menu);
   })();
 

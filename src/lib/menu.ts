@@ -9,32 +9,37 @@ interface Row {
 }
 interface Cat { id: string; name: string; sort: number }
 
-// Teks pengantar per kategori (copy marketing, bukan data harga).
-const BLURB: Record<string, string> = {
-  rambut: 'Dari rapikan ujung sampai ganti warna.',
-  wajah: 'Pilih merek produk yang biasa kamu pakai.',
-  badan: 'Di ruang spa terpisah.',
-};
 // Layanan dengan pilihan merek (Facial basic, Facial treatment, Totok wajah, ...) ditampilkan sebagai tabel,
 // bukan baris menu. Dikenali dari label pilihan "Merek" di halaman Harga.
 const BRAND_LABEL = 'Merek';
+// Kategori dengan layanan lebih dari ini dipotong, sisanya muncul lewat tombol "Lihat semua".
+const LIMIT = 10;
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 const rb = (n: number) => (n % 1000 === 0 ? `${n / 1000}rb` : 'Rp' + n.toLocaleString('id-ID'));
+// Nama dari admin kadang huruf kecil semua ("cat rambut reguler"); tampilkan dengan huruf awal kapital.
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-function priceCell(r: Row): { text: string; fixed: boolean } {
-  if (r.variants?.length) return { text: 'mulai ' + rb(Math.min(...r.variants.map((v) => v[1]))), fixed: true };
-  if (r.price) return { text: rb(r.price), fixed: true };
-  return { text: 'Tanya harga →', fixed: false };
+function priceHtml(r: Row) {
+  if (r.variants?.length) {
+    const ps = r.variants.map((v) => v[1]);
+    const min = Math.min(...ps);
+    const from = ps.some((p) => p !== min) ? '<small>dari</small> ' : '';
+    return `<span class="m-price fixed">${from}${rb(min)}</span>`;
+  }
+  if (r.price) return `<span class="m-price fixed">${rb(r.price)}</span>`;
+  return '<span class="m-price">Tanya harga →</span>';
 }
 
-function itemHtml(r: Row) {
-  const p = priceCell(r);
+function itemHtml(r: Row, extra: boolean) {
+  const name = cap(r.name.trim());
   // catatan berawalan "by " (mis. "by Gbee") tampil redup di samping nama
   const by = r.note && /^by\s/i.test(r.note) ? ` <span class="by">${esc(r.note)}</span>` : '';
-  return `<li><a class="menu-item" data-ask="${esc(r.name)}" href="#"><span class="m-name">${esc(r.name)}${by}</span>` +
-    `<span class="m-price${p.fixed ? ' fixed' : ''}">${esc(p.text)}</span>` +
-    (r.description ? `<span class="m-desc">${esc(r.description)}</span>` : '') + '</a></li>';
+  // Harga per varian (mis. panjang rambut) langsung terlihat, tidak perlu ditanyakan
+  const vars = r.variants && r.variants.length > 1
+    ? `<span class="m-vars">${r.variants.map(([n, p]) => `<span>${esc(cap(n))} <b>${rb(p)}</b></span>`).join('')}</span>` : '';
+  return `<li${extra ? ' class="extra"' : ''}><a class="menu-item" data-ask="${esc(name)}" href="#"><span class="m-name">${esc(name)}${by}</span>` +
+    priceHtml(r) + (r.description ? `<span class="m-desc">${esc(r.description)}</span>` : '') + vars + '</a></li>';
 }
 
 function brandTableHtml(rows: Row[]) {
@@ -54,17 +59,27 @@ function brandTableHtml(rows: Row[]) {
     `<table><thead><tr><th scope="col">Merek</th>${head}</tr></thead><tbody>${body}</tbody></table></div>${note}</div>`;
 }
 
+/** Menu layanan: tab per kategori (dibuat otomatis dari data) + satu panel per kategori. */
 export function menuHtml(cats: Cat[], rows: Row[]) {
-  return cats.map((c) => {
+  const groups = cats.map((c) => {
     const mine = rows.filter((r) => r.category_id === c.id).sort((a, b) => a.sort - b.sort);
     const brand = mine.filter((r) => r.variant_label === BRAND_LABEL && r.variants?.length);
-    const list = mine.filter((r) => !brand.includes(r));
-    if (!list.length && !brand.length) return '';
-    const blurb = BLURB[c.id] ? `<p>${esc(BLURB[c.id])}</p>` : '';
-    const ul = list.length ? `<ul class="menu-list">${list.map(itemHtml).join('')}</ul>` : '';
-    const inner = brand.length ? `<div>${ul}${brandTableHtml(brand)}</div>` : ul;
-    return `<div class="menu-group"><div class="menu-cat"><h3>${esc(c.name)}</h3>${blurb}</div>${inner}</div>`;
+    return { c, brand, list: mine.filter((r) => !brand.includes(r)) };
+  }).filter((g) => g.list.length || g.brand.length);
+  if (!groups.length) return '';
+
+  const tabs = groups.map((g, i) =>
+    `<button type="button" class="tab" data-cat="${esc(g.c.id)}" aria-pressed="${i === 0}">${esc(g.c.name)}` +
+    `<span class="n">${g.list.length + g.brand.length}</span></button>`).join('');
+  const panels = groups.map((g, i) => {
+    const n = g.list.length;
+    const ul = n ? `<ul class="menu-list">${g.list.map((r, j) => itemHtml(r, j >= LIMIT)).join('')}</ul>` : '';
+    const more = n > LIMIT
+      ? `<button type="button" class="link-arrow menu-more">Lihat semua ${n} layanan ${esc(g.c.name.toLowerCase())}</button>` : '';
+    return `<div class="menu-panel" data-cat="${esc(g.c.id)}"${i === 0 ? '' : ' hidden'}>${ul}${more}` +
+      (g.brand.length ? brandTableHtml(g.brand) : '') + '</div>';
   }).join('');
+  return `<div class="tabs menu-tabs" aria-label="Kategori layanan">${tabs}</div>${panels}`;
 }
 
 /** Pilihan perawatan di form booking: semua layanan aktif, urut kategori lalu urutan item. */
