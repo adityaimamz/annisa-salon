@@ -5,6 +5,8 @@ import { dayKey, fmtDay, fmtTime, rp, startOfDay } from './format';
 import type { Therapist, Tx } from './types';
 import { CloseBtn, ReceiptSheet, Select, Sheet, useConfirm, useToast } from './ui';
 
+type Sort = 'new' | 'old' | 'big' | 'small';
+const csvCell = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
 type Range = 'today' | 'yesterday' | '7' | '30' | 'month' | 'lastmonth' | 'custom';
 
 export default function TransaksiView({ refreshKey, therapists }: { refreshKey: number; therapists: Therapist[] }) {
@@ -13,6 +15,11 @@ export default function TransaksiView({ refreshKey, therapists }: { refreshKey: 
   const [range, setRange] = useState<Range>('today');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
+  const [q, setQ] = useState('');
+  const [pay, setPay] = useState('');
+  const [staffF, setStaffF] = useState('');
+  const [minAmt, setMinAmt] = useState('');
+  const [sort, setSort] = useState<Sort>('new');
   const [all, setAll] = useState<Tx[] | null>(null);
   const [sel, setSel] = useState<Tx | null>(null);
   const [editing, setEditing] = useState<Tx | null>(null);
@@ -57,9 +64,35 @@ export default function TransaksiView({ refreshKey, therapists }: { refreshKey: 
       start.setTime(from ? new Date(`${from}T00:00:00`).getTime() : 0);
       end.setTime(to ? new Date(`${to}T00:00:00`).getTime() + 864e5 : end.getTime());
     }
-    return (all ?? []).filter((t) => t.at >= start.getTime() && t.at < end.getTime()).sort((a, b) => b.at - a.at);
+    const needle = q.trim().toLowerCase();
+    const min = Number(minAmt.replace(/\D/g, '')) || 0;
+    const by: Record<Sort, (a: Tx, b: Tx) => number> = {
+      new: (a, b) => b.at - a.at, old: (a, b) => a.at - b.at, big: (a, b) => b.total - a.total, small: (a, b) => a.total - b.total,
+    };
+    return (all ?? []).filter((t) =>
+      t.at >= start.getTime() && t.at < end.getTime() && t.total >= min &&
+      (!pay || t.pay === pay) && (!staffF || t.kasir === staffF || t.lines.some((l) => l.terapis === staffF)) &&
+      (!needle || `${t.no} ${t.cust} ${t.wa} ${t.lines.map((l) => l.name).join(' ')}`.toLowerCase().includes(needle)),
+    ).sort(by[sort]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [all, range, from, to]);
+  }, [all, range, from, to, q, pay, staffF, minAmt, sort]);
+
+  // kasir dan terapis adalah orang yang sama, jadi satu filter: cocok bila bertindak sebagai kasir atau terapis
+  const staffOpts = [...new Set((all ?? []).flatMap((t) => [t.kasir, ...t.lines.map((l) => l.terapis)]).filter((x): x is string => !!x && x !== '-'))].sort();
+  const filtered = !!(q.trim() || pay || staffF || minAmt);
+  const dateSorted = sort === 'new' || sort === 'old';
+
+  function exportCsv() {
+    const rows = [['Tanggal', 'Jam', 'No. struk', 'Pelanggan', 'Layanan', 'Bayar', 'Kasir', 'Diskon', 'Total'].map(csvCell).join(',')];
+    list.slice().sort((a, b) => a.at - b.at).forEach((t) => rows.push([
+      dayKey(t.at), fmtTime(t.at), t.no, t.cust, t.lines.map((l) => l.name + (l.qty > 1 ? ' x' + l.qty : '')).join('; '), t.pay, t.kasir, t.disc, t.total,
+    ].map(csvCell).join(',')));
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([String.fromCharCode(0xfeff) + rows.join(String.fromCharCode(13, 10))], { type: 'text/csv;charset=utf-8' }));
+    a.download = `transaksi-${dayKey(new Date())}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
 
   const sum = list.reduce((a, t) => a + t.total, 0);
   const multi = range !== 'today' && range !== 'yesterday';
@@ -93,6 +126,19 @@ export default function TransaksiView({ refreshKey, therapists }: { refreshKey: 
       </div>
       {range === 'custom' && <div className="pad" style={{ paddingBottom: 0 }}><DateRange from={from} to={to} onChange={(a, b) => { setFrom(a); setTo(b); }} /></div>}
       <div className="pad">
+        <div className="flt">
+          <input className="input flt-q" type="search" placeholder="Cari nama, layanan, atau no. struk" aria-label="Cari" value={q} onChange={(e) => setQ(e.target.value)} />
+          <Select className="input" ariaLabel="Metode bayar" value={pay} onChange={setPay} placeholder="Semua metode"
+            options={[{ value: '', label: 'Semua metode' }, ...['Tunai', 'QRIS', 'Transfer'].map((m) => ({ value: m, label: m }))]} />
+          <Select className="input" ariaLabel="Karyawan" value={staffF} onChange={setStaffF} placeholder="Semua karyawan"
+            options={[{ value: '', label: 'Semua karyawan' }, ...staffOpts.map((k) => ({ value: k, label: k }))]} />
+          <input className="input" inputMode="numeric" placeholder="Minimal Rp" aria-label="Nominal minimal" value={minAmt}
+            onChange={(e) => { const n = Number(e.target.value.replace(/\D/g, '')); setMinAmt(n ? n.toLocaleString('id-ID') : ''); }} />
+          <Select className="input" ariaLabel="Urutan" value={sort} onChange={(v) => setSort(v as Sort)}
+            options={[{ value: 'new', label: 'Terbaru' }, { value: 'old', label: 'Terlama' }, { value: 'big', label: 'Total terbesar' }, { value: 'small', label: 'Total terkecil' }]} />
+          {filtered && <button className="linkbtn" type="button" onClick={() => { setQ(''); setPay(''); setStaffF(''); setMinAmt(''); }}>Reset</button>}
+          <button className="btn btn-line btn-sm" type="button" onClick={exportCsv} disabled={!list.length}>Unduh CSV</button>
+        </div>
         <div className="sumrow">
           <div><span>Pemasukan</span><b>{rp(sum)}</b></div>
           <div><span>Transaksi</span><b>{list.length}</b></div>
@@ -105,7 +151,7 @@ export default function TransaksiView({ refreshKey, therapists }: { refreshKey: 
               <tr><td colSpan={5} className="muted" style={{ textAlign: 'center', padding: 40 }}>Memuat…</td></tr>
             ) : list.length ? list.map((t, idx) => {
               const k = dayKey(t.at);
-              const head = multi && k !== last;
+              const head = multi && dateSorted && k !== last;
               last = k;
               return (
                 <FragmentRow key={t.id} head={head ? fmtDay(t.at) : null}>
@@ -122,7 +168,7 @@ export default function TransaksiView({ refreshKey, therapists }: { refreshKey: 
                 </FragmentRow>
               );
             }) : (
-              <tr><td colSpan={5} className="muted" style={{ textAlign: 'center', padding: 40 }}>Belum ada transaksi.</td></tr>
+              <tr><td colSpan={5} className="muted" style={{ textAlign: 'center', padding: 40 }}>{filtered ? 'Tidak ada transaksi yang cocok.' : 'Belum ada transaksi.'}</td></tr>
             )}
           </tbody>
         </table>

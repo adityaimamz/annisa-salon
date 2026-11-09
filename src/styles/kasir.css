@@ -513,3 +513,4 @@ body{background:var(--paper);font-size:15px;overflow:hidden}
 .cat-pill:active{transform:scale(.97)}
 .cat-pill[aria-pressed="true"]{background:var(--green);border-color:var(--green);color:var(--cream)}
 .cat-pill[aria-pressed="true"] b{color:var(--cream)}
+.v-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}

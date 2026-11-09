@@ -89,8 +89,10 @@ export default function PengeluaranView({ refreshKey }: { refreshKey: number }) 
     <section className="view" aria-label="Pengeluaran">
       <div className="v-head">
         <div><h1>Pengeluaran</h1><p className="meta">{rows.length} catatan · {rp(total)}{filtered ? ' (hasil filter)' : ''}</p></div>
-        <button className="btn btn-line btn-sm" type="button" onClick={exportCsv} disabled={!rows.length}>Unduh CSV</button>
-        <button className="btn btn-green btn-sm" type="button" onClick={() => openSheet(null)}>+ Catat pengeluaran</button>
+        <div className="v-actions">
+          <button className="btn btn-line btn-sm" type="button" onClick={exportCsv} disabled={!rows.length}>Unduh CSV</button>
+          <button className="btn btn-green btn-sm" type="button" onClick={() => openSheet(null)}>+ Catat pengeluaran</button>
+        </div>
       </div>
       <div className="pad">
         <div className="seg" role="group" aria-label="Rentang" style={{ marginBottom: 12, flexWrap: 'wrap' }}>
