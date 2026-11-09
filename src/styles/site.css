@@ -314,6 +314,27 @@ select.input{appearance:none;-webkit-appearance:none;background-image:url("data:
 .chip span:hover{border-color:var(--ink)}
 .chip input:checked + span{background:var(--green);border-color:var(--green);color:var(--cream)}
 .chip input:focus-visible + span{outline:2px solid var(--green);outline-offset:2px}
+.chips.grouped{display:block}
+.svc-group{border-top:1px solid var(--line)}
+.svc-group:last-child{border-bottom:1px solid var(--line)}
+.svc-group summary{
+  display:flex;align-items:center;gap:10px;min-height:44px;cursor:pointer;list-style:none;
+  font-size:14.5px;font-weight:600;
+}
+.svc-group summary::-webkit-details-marker{display:none}
+.svc-group summary::after{
+  content:"";margin-left:auto;width:8px;height:8px;border-right:2px solid var(--ink-3);border-bottom:2px solid var(--ink-3);
+  transform:rotate(45deg);transition:transform 200ms var(--ease-out);
+}
+.svc-group[open] summary::after{transform:rotate(-135deg)}
+.svc-group .chips{padding:2px 0 14px}
+.sg-count{font-size:12.5px;font-weight:500;color:var(--green)}
+.picked{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.pick{
+  display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 10px 0 12px;border-radius:999px;
+  border:0;background:var(--green);color:var(--cream);font:inherit;font-size:13.5px;cursor:pointer;
+}
+.pick::after{content:"×";font-size:16px;line-height:1;opacity:.8}
 .form .btn{width:100%;margin-top:6px}
 .form-foot{font-size:13px;color:var(--ink-3);text-align:center;margin-top:12px}
 
