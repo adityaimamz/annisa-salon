@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { createStaff, deleteStaff, listStaff, resetStaffPassword, setStaffActive } from './api';
+import { changeOwnPassword, createStaff, currentUserId, deleteStaff, listStaff, resetStaffPassword, setStaffActive } from './api';
 import TerapisPanel from './TerapisPanel';
 import type { StaffMember, Therapist } from './types';
 import { CloseBtn, Sheet, useConfirm, useToast } from './ui';
@@ -22,6 +22,8 @@ export default function KaryawanView({ onTherapists }: { onTherapists: (active: 
     [toast],
   );
   useEffect(() => { reload(); }, [reload]);
+  const [myId, setMyId] = useState<string | null>(null);
+  useEffect(() => { currentUserId().then(setMyId); }, []);
 
   async function toggle(m: StaffMember, active: boolean) {
     if (!active && !(await confirm({
@@ -84,6 +86,10 @@ export default function KaryawanView({ onTherapists }: { onTherapists: (active: 
                     <button className="btn btn-line btn-sm" type="button" onClick={() => toggle(m, !m.active)}>{m.active ? 'Nonaktifkan' : 'Aktifkan'}</button>
                     <button className="btn btn-line btn-sm" type="button" onClick={() => setResetting(m)}>Atur ulang sandi</button>
                     <button className="btn btn-line btn-sm btn-danger" type="button" onClick={() => remove(m)}>Hapus</button>
+                  </div>
+                ) : m.id === myId ? (
+                  <div className="st-act">
+                    <button className="btn btn-line btn-sm" type="button" onClick={() => setResetting(m)}>Ubah sandi</button>
                   </div>
                 ) : <span />}
               </div>
@@ -177,7 +183,11 @@ function ResetSheet({ target, onClose, onDone }: { target: StaffMember | null; o
     if (!target || busy) return;
     if (pw.length < 8) return setErr('Kata sandi minimal 8 karakter.');
     setBusy(true); setErr('');
-    try { await resetStaffPassword(target.id, pw); onClose(); onDone(target.name); }
+    try {
+      if (target.role === 'owner') await changeOwnPassword(pw);
+      else await resetStaffPassword(target.id, pw);
+      onClose(); onDone(target.name);
+    }
     catch (ex) { setErr((ex as Error).message); toast(`Gagal: ${(ex as Error).message}`, true); }
     finally { setBusy(false); }
   }
@@ -189,7 +199,9 @@ function ResetSheet({ target, onClose, onDone }: { target: StaffMember | null; o
           <CloseBtn onClick={onClose} />
           <h3 id="resetStaffTitle">Atur ulang kata sandi</h3>
           <p className="role-note" style={{ marginTop: 16 }}>
-            {target.name} · {target.email}. Berikan kata sandi baru ke karyawan setelah disimpan.
+            {target.role === 'owner'
+              ? `${target.name} · ${target.email}. Ini kata sandi akun Anda sendiri; catat sebelum disimpan.`
+              : `${target.name} · ${target.email}. Berikan kata sandi baru ke karyawan setelah disimpan.`}
           </p>
           <PasswordField id="rsPw" value={pw} onChange={setPw} />
           {err && <p className="field-err" role="alert">{err}</p>}

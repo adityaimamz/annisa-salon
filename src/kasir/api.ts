@@ -232,6 +232,17 @@ export async function resetStaffPassword(id: string, password: string) {
   fail(error);
 }
 
+export async function currentUserId(): Promise<string | null> {
+  const { data } = await db().auth.getSession();
+  return data.session?.user.id ?? null;
+}
+
+/** Ganti kata sandi akun yang sedang masuk (owner). */
+export async function changeOwnPassword(password: string) {
+  const { error } = await db().auth.updateUser({ password });
+  fail(error);
+}
+
 export async function setStaffActive(id: string, active: boolean) {
   const { error } = await db().from('profiles').update({ active }).eq('id', id).eq('role', 'kasir');
   fail(error);
