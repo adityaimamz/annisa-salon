@@ -183,7 +183,9 @@ export default function TransaksiView({ refreshKey, therapists, items }: { refre
   );
 }
 
-interface EditLine { key: number; catalogId: string | null; cat: string | null; name: string; price: string; qty: number; terapis: string }
+const FREE = '__free';
+const CUR = '__cur';
+interface EditLine { free?: boolean; key: number; catalogId: string | null; cat: string | null; name: string; price: string; qty: number; terapis: string }
 const PAYS: PayMethod[] = ['Tunai', 'QRIS', 'Transfer'];
 let lineKey = 0;
 
@@ -219,11 +221,20 @@ function EditSheet({ tx, therapists, items, onClose, onSaved }: {
   };
 
   const patch = (key: number, p: Partial<EditLine>) => setLines((cur) => cur.map((l) => (l.key === key ? { ...l, ...p } : l)));
-  // mengetik nama yang sama dengan item katalog mengisi harga dan kategorinya
-  function setName(l: EditLine, name: string) {
-    const hit = items.find((i) => i.name.toLowerCase() === name.trim().toLowerCase());
-    if (hit) patch(l.key, { name, catalogId: hit.id, cat: hit.cat, price: hit.price != null ? String(hit.price) : l.price });
-    else patch(l.key, { name, catalogId: null });
+  // pilihan layanan: katalog aktif + nama lama di transaksi ini (bila tidak ada di katalog) + "tulis sendiri"
+  const itemOpts = (l: EditLine) => {
+    const opts = items.filter((i) => !i.off || i.id === l.catalogId)
+      .map((i) => ({ value: i.id, label: i.service ? i.name : `${i.name} (produk)` }));
+    const inCatalog = !!l.catalogId && items.some((i) => i.id === l.catalogId);
+    if (!inCatalog && l.name.trim()) opts.unshift({ value: CUR, label: l.name });
+    opts.push({ value: FREE, label: 'Tulis nama sendiri…' });
+    return opts;
+  };
+  function pickItem(l: EditLine, v: string) {
+    if (v === FREE) return patch(l.key, { free: true });
+    if (v === CUR) return;
+    const hit = items.find((i) => i.id === v);
+    if (hit) patch(l.key, { catalogId: hit.id, cat: hit.cat, name: hit.name, price: hit.price != null ? String(hit.price) : l.price, free: false });
   }
 
   const priceOf = (l: EditLine) => num(l.price);
@@ -278,12 +289,17 @@ function EditSheet({ tx, therapists, items, onClose, onSaved }: {
 
           <div className="field">
             <span className="label">Layanan</span>
-            <datalist id="etItems">{items.map((i) => <option key={i.id} value={i.name} />)}</datalist>
             {lines.map((l, i) => (
               <div className="et-line" key={l.key}>
                 <div className="et-line-head">
-                  <input className="input" list="etItems" aria-label={`Nama layanan ${i + 1}`} placeholder="Nama layanan" value={l.name}
-                    onChange={(e) => setName(l, e.target.value)} />
+                  {l.free ? (
+                    <input className="input" aria-label={`Nama layanan ${i + 1}`} placeholder="Nama layanan" value={l.name} autoFocus
+                      onChange={(e) => patch(l.key, { name: e.target.value, catalogId: null })} />
+                  ) : (
+                    <Select className="input" ariaLabel={`Layanan ${i + 1}`} placeholder="Pilih layanan"
+                      value={l.catalogId && items.some((x) => x.id === l.catalogId) ? l.catalogId : l.name.trim() ? CUR : ''}
+                      onChange={(v) => pickItem(l, v)} options={itemOpts(l)} />
+                  )}
                   <button className="btn btn-line btn-sm btn-danger" type="button" aria-label={`Hapus ${l.name || 'layanan'}`}
                     disabled={lines.length === 1} onClick={() => setLines((c) => c.filter((x) => x.key !== l.key))}>Hapus</button>
                 </div>
