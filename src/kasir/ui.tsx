@@ -33,6 +33,7 @@ export const Icon = {
   kasir: (s = 18) => svg(<><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 9h18M8 14h3" /></>, s),
   transaksi: (s = 18) => svg(<><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3z" /><path d="M9 8h6M9 12h6" /></>, s),
   keuangan: (s = 18) => svg(<path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />, s),
+  pengeluaran: (s = 18) => svg(<><rect x="3" y="6" width="18" height="13" rx="2" /><path d="M3 10h18M7 15h4" /></>, s),
   harga: (s = 18) => svg(<><path d="M3 12V4h8l10 10-8 8L3 12z" /><circle cx="7.5" cy="8.5" r="1.5" /></>, s),
   galeri: (s = 18) => svg(<><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="8.5" cy="9.5" r="1.5" /><path d="M21 16l-5-5-8 9" /></>, s),
   karyawan: (s = 18) => svg(<><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.4c2.2.7 3.5 2.6 3.5 5.6" /></>, s),

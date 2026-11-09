@@ -275,6 +275,9 @@ body{background:var(--paper);font-size:15px;overflow:hidden}
 .exp-list{list-style:none}
 .exp-list li{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:11px 0;border-bottom:1px solid var(--line)}
 .exp-list li:last-child{border-bottom:0}
+.exp-list li.clickable{cursor:pointer;border-radius:8px;transition:background .15s}
+.exp-list li.clickable:hover{background:rgba(24,32,28,.04)}
+.exp-list li.clickable:focus-visible{outline:2px solid var(--green);outline-offset:-2px}
 .exp-list .n{font-weight:600;font-size:14.5px}
 .exp-list .m{font-size:12.5px;color:var(--ink-3)}
 .exp-list .a{font-variant-numeric:tabular-nums;font-weight:600;grid-column:2;grid-row:1/span 2;align-self:center}

@@ -1,36 +1,61 @@
 import { useEffect, useMemo, useState } from 'react';
-import { addExpense, loadExpenses, loadTransactions } from './api';
+import { loadExpenses, loadTransactions } from './api';
+import DateRange, { defaultRange } from './DateRange';
 import DayChart, { type DayPoint } from './DayChart';
-import { dayKey, fmtDay, money, num, rp, rpk, startOfDay } from './format';
-import { EXP_CATS, type Category, type Expense, type Tx } from './types';
-import { CloseBtn, Sheet, useToast } from './ui';
+import { dayKey, fmtDay, rp, rpk, startOfDay } from './format';
+import ExpenseSheet, { expenseCats } from './ExpenseSheet';
+import type { Category, Expense, Tx } from './types';
+import { useToast } from './ui';
 
-type Range = '7' | '30' | 'month';
+type Range = '7' | '30' | 'month' | 'lastmonth' | 'custom';
+const MAX_DAYS = 366;
 const PAYC: Record<string, string> = { Tunai: '#1F8A5B', QRIS: '#6A63C9', Transfer: '#7A817C' };
 
-export default function KeuanganView({ cats, refreshKey }: { cats: Category[]; refreshKey: number }) {
+export default function KeuanganView({ cats, refreshKey, onOpenPengeluaran }: { cats: Category[]; refreshKey: number; onOpenPengeluaran: () => void }) {
   const toast = useToast();
   const [range, setRange] = useState<Range>('30');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
   const [txs, setTxs] = useState<Tx[] | null>(null);
   const [exps, setExps] = useState<Expense[]>([]);
   const [showTable, setShowTable] = useState(false);
   const [expOpen, setExpOpen] = useState(false);
+  const [editing, setEditing] = useState<Expense | null>(null);
+  const openExp = (x: Expense | null) => { setEditing(x); setExpOpen(true); };
   const [version, setVersion] = useState(0);
   const today = startOfDay(new Date());
 
   useEffect(() => {
     // 31 hari periode ini + 31 hari periode sebelumnya
+    // 62 hari terakhir, atau sejak dua bulan lalu (untuk Bulan lalu + pembandingnya), mana yang lebih lama
     const since = new Date(today); since.setDate(since.getDate() - 62);
+    since.setTime(Math.min(since.getTime(), new Date(today.getFullYear(), today.getMonth() - 2, 1).getTime()));
+    if (range === 'custom' && from) {
+      // rentang bebas: muat sejak awal rentang dikurangi panjangnya (untuk pembanding periode lalu)
+      const f = new Date(`${from}T00:00:00`), len = Math.max(1, Math.round((new Date(`${to || from}T00:00:00`).getTime() - f.getTime()) / 864e5) + 1);
+      since.setTime(Math.min(since.getTime(), f.getTime() - len * 864e5));
+    }
     Promise.all([loadTransactions(since.getTime()), loadExpenses(since.getTime())])
       .then(([t, e]) => { setTxs(t); setExps(e); })
       .catch((e) => toast(`Gagal memuat data keuangan: ${e.message}`, true));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshKey, version]);
+  }, [refreshKey, version, range === 'custom' ? from : '', range === 'custom' ? to : '']);
 
   const d = useMemo(() => {
-    const n = range === 'month' ? today.getDate() : Number(range);
-    const days = Array.from({ length: n }, (_, i) => { const x = new Date(today); x.setDate(x.getDate() - (n - 1 - i)); return x; });
-    const start = days[0].getTime(), end = today.getTime() + 864e5, prevStart = start - (end - start);
+    let days: Date[];
+    const f = from ? new Date(`${from}T00:00:00`) : null, u = to ? new Date(`${to}T00:00:00`) : null;
+    if (range === 'custom' && f && u && u >= f) {
+      const len = Math.min(MAX_DAYS, Math.round((u.getTime() - f.getTime()) / 864e5) + 1);
+      days = Array.from({ length: len }, (_, i) => new Date(f.getFullYear(), f.getMonth(), f.getDate() + i));
+    } else if (range === 'lastmonth') {
+      const first = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      const len = new Date(today.getFullYear(), today.getMonth(), 0).getDate();
+      days = Array.from({ length: len }, (_, i) => new Date(first.getFullYear(), first.getMonth(), i + 1));
+    } else {
+      const n = range === 'month' ? today.getDate() : Number(range);
+      days = Array.from({ length: n }, (_, i) => { const x = new Date(today); x.setDate(x.getDate() - (n - 1 - i)); return x; });
+    }
+    const start = days[0].getTime(), end = days[days.length - 1].getTime() + 864e5, prevStart = start - (end - start);
     const all = txs ?? [];
     const tx = all.filter((t) => t.at >= start && t.at < end), ex = exps.filter((x) => x.at >= start && x.at < end);
     const ptx = all.filter((t) => t.at >= prevStart && t.at < start), pex = exps.filter((x) => x.at >= prevStart && x.at < start);
@@ -41,9 +66,9 @@ export default function KeuanganView({ cats, refreshKey }: { cats: Category[]; r
       const dt = tx.filter((t) => dayKey(t.at) === k);
       return { d: day, inc: dt.reduce((a, t) => a + t.total, 0), n: dt.length, out: ex.filter((x) => dayKey(x.at) === k).reduce((a, x) => a + x.amt, 0) };
     });
-    return { start, tx, ex, inc, out, pin, pout, series };
+    return { start, last: days[days.length - 1], tx, ex, inc, out, pin, pout, series };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [txs, exps, range]);
+  }, [txs, exps, range, from, to]);
 
   const { tx, ex, inc, out, pin, pout, series } = d;
   const delta = (a: number, b: number) => (b ? `${a >= b ? '▲' : '▼'} ${Math.abs(Math.round(((a - b) / b) * 100))}% vs periode lalu` : '');
@@ -51,23 +76,35 @@ export default function KeuanganView({ cats, refreshKey }: { cats: Category[]; r
 
   const lines = tx.flatMap((t) => t.lines);
   const byCat = cats.map((c) => ({ name: c.name, v: lines.filter((l) => l.cat === c.id).reduce((a, l) => a + l.price * l.qty, 0) })).sort((a, b) => b.v - a.v);
+  const uncat = lines.filter((l) => !cats.some((c) => c.id === l.cat)).reduce((a, l) => a + l.price * l.qty, 0);
+  if (uncat) byCat.push({ name: 'Tanpa kategori', v: uncat });
+  const bySvc = [...lines.reduce((m, l) => {
+    const k = l.name.trim().toLowerCase();
+    const cur = m.get(k) ?? { name: l.name.trim(), qty: 0, v: 0 };
+    cur.qty += l.qty; cur.v += l.price * l.qty;
+    return m.set(k, cur);
+  }, new Map<string, { name: string; qty: number; v: number }>()).values()].sort((a, b) => b.v - a.v || b.qty - a.qty);
+  const smax = Math.max(1, ...bySvc.map((x) => x.v));
   const cmax = Math.max(1, ...byCat.map((c) => c.v)), ctot = byCat.reduce((a, c) => a + c.v, 0) || 1;
-  const byExp = EXP_CATS.map((c) => ({ name: c, v: ex.filter((x) => x.cat === c).reduce((a, x) => a + x.amt, 0) })).filter((c) => c.v).sort((a, b) => b.v - a.v);
+  // kategori bawaan + kategori lain yang muncul di data (mis. hasil impor)
+  const expCats = expenseCats(ex.map((x) => x.cat));
+  const byExp = expCats.map((c) => ({ name: c, v: ex.filter((x) => x.cat === c).reduce((a, x) => a + x.amt, 0) })).filter((c) => c.v).sort((a, b) => b.v - a.v);
   const emax = Math.max(1, ...byExp.map((c) => c.v));
   const pays = (['Tunai', 'QRIS', 'Transfer'] as const).map((p) => ({ p, v: tx.filter((t) => t.pay === p).reduce((a, t) => a + t.total, 0) }));
   const expSorted = ex.slice().sort((a, b) => b.at - a.at);
-  const seg: [Range, string][] = [['7', '7 hari'], ['30', '30 hari'], ['month', 'Bulan ini']];
+  const seg: [Range, string][] = [['7', '7 hari'], ['30', '30 hari'], ['month', 'Bulan ini'], ['lastmonth', 'Bulan lalu'], ['custom', 'Pilih tanggal']];
   const hoverNone = typeof matchMedia !== 'undefined' && matchMedia('(hover: none)').matches;
 
   return (
     <section className="view" aria-label="Keuangan">
       <div className="v-head">
         <div><h1>Keuangan</h1>
-          <p className="meta">{fmtDay(d.start, { day: 'numeric', month: 'short' })} – {fmtDay(today, { day: 'numeric', month: 'short', year: 'numeric' })}</p></div>
+          <p className="meta">{fmtDay(d.start, { day: 'numeric', month: 'short' })} – {fmtDay(d.last, { day: 'numeric', month: 'short', year: 'numeric' })}</p></div>
         <div className="seg">
-          {seg.map(([r, label]) => <button key={r} aria-pressed={range === r} onClick={() => setRange(r)}>{label}</button>)}
+          {seg.map(([r, label]) => <button key={r} aria-pressed={range === r} onClick={() => { if (r === 'custom' && !from) { const [a, b] = defaultRange(); setFrom(a); setTo(b); } setRange(r); }}>{label}</button>)}
         </div>
       </div>
+      {range === 'custom' && <div className="pad" style={{ paddingBottom: 0 }}><DateRange from={from} to={to} onChange={(a, b) => { setFrom(a); setTo(b); }} /></div>}
       <div className="pad">
         <div className="kpis">
           <div className="kpi hero"><span>Laba bersih</span><b>{rp(inc - out)}</b><small>{inc ? `Margin ${Math.round(((inc - out) / inc) * 100)}%` : ''}</small></div>
@@ -106,9 +143,22 @@ export default function KeuanganView({ cats, refreshKey }: { cats: Category[]; r
           </div>
 
           <div className="panel">
+            <div className="panel-head"><div><h2>Layanan terlaris</h2><p className="ph-sub">Urut pendapatan · 10 teratas</p></div></div>
+            <div className="hbar">
+              {bySvc.slice(0, 10).map((x) => (
+                <div className="hbar-row" key={x.name} title={`${x.name}: ${x.qty}× · ${rp(x.v)}`}>
+                  <span>{x.name}</span><div className="track"><div className="fill" style={{ transform: `scaleX(${Math.max(0.01, x.v / smax)})` }} /></div>
+                  <b>{rpk(x.v)}<span className="pct">{x.qty}×</span></b>
+                </div>
+              ))}
+              {!bySvc.length && <p className="ph-sub">Belum ada transaksi di rentang ini.</p>}
+            </div>
+          </div>
+
+          <div className="panel">
             <div className="panel-head">
               <div><h2>Pengeluaran</h2><p className="ph-sub">{ex.length} catatan · {rp(out)}</p></div>
-              <button className="btn btn-green btn-sm" type="button" onClick={() => setExpOpen(true)}>+ Catat pengeluaran</button>
+              <button className="btn btn-green btn-sm" type="button" onClick={() => openExp(null)}>+ Catat pengeluaran</button>
             </div>
             <div className="hbar exp-bars">
               {byExp.map((c) => (
@@ -120,11 +170,15 @@ export default function KeuanganView({ cats, refreshKey }: { cats: Category[]; r
             </div>
             <ul className="exp-list">
               {expSorted.length ? <>
-                {expSorted.slice(0, 8).map((x) => (
-                  <li key={x.id}><span className="n">{x.note || x.cat}</span><span className="a">{rp(x.amt)}</span>
+                {expSorted.slice(0, 5).map((x) => (
+                  <li key={x.id} className="clickable" role="button" tabIndex={0} aria-label={`Ubah ${x.note || x.cat}`}
+                    onClick={() => openExp(x)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openExp(x); } }}>
+                    <span className="n">{x.note || x.cat}</span><span className="a">{rp(x.amt)}</span>
                     <span className="m">{x.cat} · {fmtDay(x.at, { day: 'numeric', month: 'short' })}</span></li>
                 ))}
-                {expSorted.length > 8 && <li><span className="m">+ {expSorted.length - 8} catatan lainnya</span></li>}
+                <li><button className="linkbtn" type="button" onClick={onOpenPengeluaran}>
+                  {expSorted.length > 5 ? `Lihat semua pengeluaran (${expSorted.length})` : 'Buka halaman Pengeluaran'}</button></li>
               </> : <li><span className="m">Belum ada pengeluaran.</span></li>}
             </ul>
           </div>
@@ -143,60 +197,8 @@ export default function KeuanganView({ cats, refreshKey }: { cats: Category[]; r
         </div>
       </div>
 
-      <ExpenseSheet open={expOpen} onClose={() => setExpOpen(false)} onSaved={() => { setVersion((v) => v + 1); toast('Pengeluaran tersimpan'); }} />
+      <ExpenseSheet open={expOpen} editing={editing} knownCats={exps.map((x) => x.cat)} onClose={() => setExpOpen(false)}
+        onSaved={(msg) => { setVersion((v) => v + 1); toast(msg); }} />
     </section>
-  );
-}
-
-function ExpenseSheet({ open, onClose, onSaved }: { open: boolean; onClose: () => void; onSaved: () => void }) {
-  const toast = useToast();
-  const [cat, setCat] = useState(EXP_CATS[0]);
-  const [amt, setAmt] = useState('');
-  const [date, setDate] = useState('');
-  const [note, setNote] = useState('');
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => { if (open) { setDate(dayKey(new Date())); setAmt(''); setNote(''); setCat(EXP_CATS[0]); } }, [open]);
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    const a = num(amt);
-    if (!a || busy) return;
-    const [Y, M, D] = date.split('-').map(Number);
-    setBusy(true);
-    try {
-      await addExpense({ cat, amt: a, note: note.trim(), at: new Date(Y, M - 1, D, 12).getTime() });
-      onClose(); onSaved();
-    } catch (err) {
-      toast(`Gagal menyimpan: ${(err as Error).message}`, true);
-    } finally { setBusy(false); }
-  }
-
-  return (
-    <Sheet open={open} onClose={onClose} labelledBy="expTitle">
-      <form className="sheet-in" onSubmit={submit} noValidate>
-        <CloseBtn onClick={onClose} />
-        <h3 id="expTitle">Catat pengeluaran</h3>
-        <div className="field" style={{ marginTop: 20 }}>
-          <span className="label">Kategori</span>
-          <div className="chips">
-            {EXP_CATS.map((c) => (
-              <label className="chip" key={c}><input type="radio" name="ecat" value={c} checked={cat === c} onChange={() => setCat(c)} /><span>{c}</span></label>
-            ))}
-          </div>
-        </div>
-        <div className="field row2">
-          <div><label htmlFor="expAmt">Nominal</label>
-            <input className="input" id="expAmt" inputMode="numeric" placeholder="Rp0" value={amt ? 'Rp' + money(num(amt)) : ''} onChange={(e) => setAmt(e.target.value)} autoFocus /></div>
-          <div><label htmlFor="expDate">Tanggal</label>
-            <input className="input" id="expDate" type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
-        </div>
-        <div className="field"><label htmlFor="expNote">Keterangan</label>
-          <input className="input" id="expNote" placeholder="Misal: beli cat rambut 6 tube" value={note} onChange={(e) => setNote(e.target.value)} /></div>
-        <button className="btn btn-green" type="submit" style={{ width: '100%' }} disabled={!num(amt) || busy}>
-          {busy ? 'Menyimpan…' : 'Simpan pengeluaran'}
-        </button>
-      </form>
-    </Sheet>
   );
 }

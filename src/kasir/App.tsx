@@ -9,17 +9,19 @@ import KaryawanView from './KaryawanView';
 import KasirView from './KasirView';
 import KeuanganView from './KeuanganView';
 import Login from './Login';
+import PengeluaranView from './PengeluaranView';
 import { cacheGet, cacheSet, dequeue, enqueue, isNetworkError, listQueue } from './offline';
 import TransaksiView from './TransaksiView';
 import type { Category, Item, Profile, Therapist } from './types';
 import { ConfirmProvider, Icon, ToastProvider, useToast } from './ui';
 import { supabase, supabaseReady } from '../lib/supabase';
 
-type View = 'kasir' | 'transaksi' | 'keuangan' | 'harga' | 'galeri' | 'karyawan';
+type View = 'kasir' | 'transaksi' | 'keuangan' | 'pengeluaran' | 'harga' | 'galeri' | 'karyawan';
 const NAV: { id: View; label: string; icon: (s?: number) => React.ReactNode; ownerOnly?: boolean }[] = [
   { id: 'kasir', label: 'Kasir', icon: Icon.kasir },
   { id: 'transaksi', label: 'Transaksi', icon: Icon.transaksi, ownerOnly: true },
   { id: 'keuangan', label: 'Keuangan', icon: Icon.keuangan, ownerOnly: true },
+  { id: 'pengeluaran', label: 'Pengeluaran', icon: Icon.pengeluaran, ownerOnly: true },
   { id: 'harga', label: 'Harga', icon: Icon.harga },
   { id: 'galeri', label: 'Galeri', icon: Icon.galeri, ownerOnly: true },
   { id: 'karyawan', label: 'Karyawan', icon: Icon.karyawan, ownerOnly: true },
@@ -188,7 +190,8 @@ function Shell({ userId }: { userId: string }) {
           <KasirView cats={cats} items={items} therapists={therapists} profile={profile} onPaid={() => setRefreshKey((k) => k + 1)} onQueued={flush} />
         </div>
         {current === 'transaksi' && <TransaksiView refreshKey={refreshKey} therapists={therapists} />}
-        {current === 'keuangan' && <KeuanganView cats={cats} refreshKey={refreshKey} />}
+        {current === 'keuangan' && <KeuanganView cats={cats} refreshKey={refreshKey} onOpenPengeluaran={() => setView('pengeluaran')} />}
+        {current === 'pengeluaran' && <PengeluaranView refreshKey={refreshKey} />}
         {current === 'harga' && <HargaView cats={cats} items={items} onSave={save} onDelete={remove} readOnly={!isOwner} />}
         {current === 'galeri' && <GaleriView />}
         {current === 'karyawan' && <KaryawanView onTherapists={setTherapists} />}

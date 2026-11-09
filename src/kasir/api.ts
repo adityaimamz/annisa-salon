@@ -214,6 +214,18 @@ export async function addExpense(e: { cat: string; amt: number; note: string; at
   fail(error);
 }
 
+export async function updateExpense(id: number, e: { cat: string; amt: number; note: string; at: number }) {
+  const { error } = await db().from('expenses').update({
+    category: e.cat, amount: e.amt, note: e.note || null, created_at: new Date(e.at).toISOString(),
+  }).eq('id', id);
+  fail(error);
+}
+
+export async function deleteExpense(id: number) {
+  const { error } = await db().from('expenses').delete().eq('id', id);
+  fail(error);
+}
+
 /* ---------- karyawan (hanya owner; ditegakkan RPC + RLS) ---------- */
 export async function listStaff(): Promise<StaffMember[]> {
   const { data, error } = await db().rpc('list_staff');

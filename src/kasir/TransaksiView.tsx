@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { deleteTransaction, loadTransactions, updateTransaction } from './api';
+import DateRange, { defaultRange } from './DateRange';
 import { dayKey, fmtDay, fmtTime, rp, startOfDay } from './format';
 import type { Therapist, Tx } from './types';
 import { CloseBtn, ReceiptSheet, Select, Sheet, useConfirm, useToast } from './ui';
 
-type Range = 'today' | 'yesterday' | '7';
+type Range = 'today' | 'yesterday' | '7' | '30' | 'month' | 'lastmonth' | 'custom';
 
 export default function TransaksiView({ refreshKey, therapists }: { refreshKey: number; therapists: Therapist[] }) {
   const toast = useToast();
   const confirm = useConfirm();
   const [range, setRange] = useState<Range>('today');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
   const [all, setAll] = useState<Tx[] | null>(null);
   const [sel, setSel] = useState<Tx | null>(null);
   const [editing, setEditing] = useState<Tx | null>(null);
@@ -30,25 +33,52 @@ export default function TransaksiView({ refreshKey, therapists }: { refreshKey: 
   const today = startOfDay(new Date());
 
   useEffect(() => {
-    const since = new Date(today); since.setDate(since.getDate() - 6);
-    loadTransactions(since.getTime()).then(setAll).catch((e) => toast(`Gagal memuat transaksi: ${e.message}`, true));
+    // cukup untuk semua rentang: 30 hari terakhir dan awal bulan lalu, mana yang lebih lama
+    const since = new Date(today); since.setDate(since.getDate() - 29);
+    const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    let since0 = Math.min(since.getTime(), lastMonth.getTime());
+    if (range === 'custom' && from) since0 = Math.min(since0, new Date(`${from}T00:00:00`).getTime());
+    loadTransactions(since0).then(setAll).catch((e) => toast(`Gagal memuat transaksi: ${e.message}`, true));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshKey]);
+  }, [refreshKey, range === 'custom' ? from : '']);
 
   const list = useMemo(() => {
     const start = new Date(today), end = new Date(today);
     end.setDate(end.getDate() + 1);
     if (range === 'yesterday') { start.setDate(start.getDate() - 1); end.setDate(end.getDate() - 1); }
     if (range === '7') start.setDate(start.getDate() - 6);
+    if (range === '30') start.setDate(start.getDate() - 29);
+    if (range === 'month') start.setDate(1);
+    if (range === 'lastmonth') {
+      end.setTime(new Date(today.getFullYear(), today.getMonth(), 1).getTime());
+      start.setTime(new Date(today.getFullYear(), today.getMonth() - 1, 1).getTime());
+    }
+    if (range === 'custom') {
+      start.setTime(from ? new Date(`${from}T00:00:00`).getTime() : 0);
+      end.setTime(to ? new Date(`${to}T00:00:00`).getTime() + 864e5 : end.getTime());
+    }
     return (all ?? []).filter((t) => t.at >= start.getTime() && t.at < end.getTime()).sort((a, b) => b.at - a.at);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [all, range]);
+  }, [all, range, from, to]);
 
   const sum = list.reduce((a, t) => a + t.total, 0);
-  const meta = range === '7'
-    ? `${fmtDay(Date.now() - 6 * 864e5, { day: 'numeric', month: 'short' })} – ${fmtDay(today, { day: 'numeric', month: 'short' })}`
-    : fmtDay(range === 'today' ? today : today.getTime() - 864e5);
-  const seg: [Range, string][] = [['today', 'Hari ini'], ['yesterday', 'Kemarin'], ['7', '7 hari']];
+  const multi = range !== 'today' && range !== 'yesterday';
+  const short = { day: 'numeric', month: 'short' } as const;
+  let meta: string;
+  if (range === 'lastmonth') {
+    meta = fmtDay(new Date(today.getFullYear(), today.getMonth() - 1, 1), { month: 'long', year: 'numeric' });
+  } else if (range === 'custom') {
+    meta = from && to ? `${fmtDay(new Date(`${from}T00:00:00`), short)} – ${fmtDay(new Date(`${to}T00:00:00`), short)}` : 'Pilih tanggal';
+  } else if (multi) {
+    const from = range === 'month' ? new Date(today.getFullYear(), today.getMonth(), 1)
+      : new Date(today.getTime() - (range === '7' ? 6 : 29) * 864e5);
+    meta = `${fmtDay(from, short)} – ${fmtDay(today, short)}`;
+  } else {
+    meta = fmtDay(range === 'today' ? today : today.getTime() - 864e5);
+  }
+  const seg: [Range, string][] = [
+    ['today', 'Hari ini'], ['yesterday', 'Kemarin'], ['7', '7 hari'], ['30', '30 hari'], ['month', 'Bulan ini'], ['lastmonth', 'Bulan lalu'], ['custom', 'Pilih tanggal'],
+  ];
 
   let last = '';
   return (
@@ -57,10 +87,11 @@ export default function TransaksiView({ refreshKey, therapists }: { refreshKey: 
         <div><h1>Transaksi</h1><p className="meta">{meta}</p></div>
         <div className="seg">
           {seg.map(([r, label]) => (
-            <button key={r} aria-pressed={range === r} onClick={() => setRange(r)}>{label}</button>
+            <button key={r} aria-pressed={range === r} onClick={() => { if (r === 'custom' && !from) { const [a, b] = defaultRange(); setFrom(a); setTo(b); } setRange(r); }}>{label}</button>
           ))}
         </div>
       </div>
+      {range === 'custom' && <div className="pad" style={{ paddingBottom: 0 }}><DateRange from={from} to={to} onChange={(a, b) => { setFrom(a); setTo(b); }} /></div>}
       <div className="pad">
         <div className="sumrow">
           <div><span>Pemasukan</span><b>{rp(sum)}</b></div>
@@ -74,7 +105,7 @@ export default function TransaksiView({ refreshKey, therapists }: { refreshKey: 
               <tr><td colSpan={5} className="muted" style={{ textAlign: 'center', padding: 40 }}>Memuat…</td></tr>
             ) : list.length ? list.map((t, idx) => {
               const k = dayKey(t.at);
-              const head = range === '7' && k !== last;
+              const head = multi && k !== last;
               last = k;
               return (
                 <FragmentRow key={t.id} head={head ? fmtDay(t.at) : null}>
