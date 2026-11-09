@@ -296,7 +296,7 @@ function EditSheet({ tx, therapists, items, onClose, onSaved }: {
                     <input className="input" aria-label={`Nama layanan ${i + 1}`} placeholder="Nama layanan" value={l.name} autoFocus
                       onChange={(e) => patch(l.key, { name: e.target.value, catalogId: null })} />
                   ) : (
-                    <Select className="input" ariaLabel={`Layanan ${i + 1}`} placeholder="Pilih layanan"
+                    <Select className="input" searchable ariaLabel={`Layanan ${i + 1}`} placeholder="Pilih layanan"
                       value={l.catalogId && items.some((x) => x.id === l.catalogId) ? l.catalogId : l.name.trim() ? CUR : ''}
                       onChange={(v) => pickItem(l, v)} options={itemOpts(l)} />
                   )}

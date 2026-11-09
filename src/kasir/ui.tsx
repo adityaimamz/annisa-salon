@@ -127,19 +127,24 @@ export interface SelectOption { value: string; label: string }
 interface SelectPos { left: number; width: number; top?: number; bottom?: number; maxH: number; up: boolean }
 
 export function Select({
-  value, onChange, options, placeholder = 'Pilih', id, className = '', ariaLabel,
+  value, onChange, options, placeholder = 'Pilih', id, className = '', ariaLabel, searchable = false,
 }: {
   value: string; onChange: (v: string) => void; options: SelectOption[]; placeholder?: string;
-  id?: string; className?: string; ariaLabel?: string;
+  id?: string; className?: string; ariaLabel?: string; searchable?: boolean;
 }) {
   const btn = useRef<HTMLButtonElement>(null);
-  const list = useRef<HTMLUListElement>(null);
+  const list = useRef<HTMLDivElement>(null);
+  const ul = useRef<HTMLUListElement>(null);
+  const search = useRef<HTMLInputElement>(null);
   const uid = useId();
   const [open, setOpen] = useState(false);
   const [closing, setClosing] = useState(false);
   const [active, setActive] = useState(0);
+  const [query, setQuery] = useState('');
   const [pos, setPos] = useState<SelectPos>({ left: 0, width: 0, maxH: 280, up: false });
   const sel = options.findIndex((o) => o.value === value);
+  const q = query.trim().toLowerCase();
+  const view = searchable && q ? options.filter((o) => o.label.toLowerCase().includes(q)) : options;
   const shown = open || closing;
 
   const place = () => {
@@ -159,6 +164,7 @@ export function Select({
 
   const openList = () => {
     place();
+    setQuery('');
     setActive(sel >= 0 ? sel : 0);
     setClosing(false);
     setOpen(true);
@@ -202,28 +208,31 @@ export function Select({
   }, [open, closeList]);
 
   useEffect(() => {
-    if (open) (list.current?.children[active] as HTMLElement | undefined)?.scrollIntoView({ block: 'nearest' });
+    if (open) (ul.current?.children[active] as HTMLElement | undefined)?.scrollIntoView({ block: 'nearest' });
   }, [open, active]);
 
+  // kolom cari langsung aktif saat daftar terbuka
+  useEffect(() => { if (open && searchable) search.current?.focus({ preventScroll: true }); }, [open, searchable]);
+
   const pick = (i: number) => {
-    const o = options[i];
+    const o = view[i];
     if (o) onChange(o.value);
     closeList();
     btn.current?.focus();
   };
 
   function onKey(e: React.KeyboardEvent) {
-    const n = options.length;
+    const n = view.length;
     if (!open) {
       if (['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(e.key)) { e.preventDefault(); openList(); }
       return;
     }
     if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeList(); }
-    else if (e.key === 'ArrowDown') { e.preventDefault(); setActive((a) => (a + 1) % n); }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); setActive((a) => (a - 1 + n) % n); }
-    else if (e.key === 'Home') { e.preventDefault(); setActive(0); }
-    else if (e.key === 'End') { e.preventDefault(); setActive(n - 1); }
-    else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(active); }
+    else if (e.key === 'ArrowDown') { e.preventDefault(); if (n) setActive((a) => (a + 1) % n); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); if (n) setActive((a) => (a - 1 + n) % n); }
+    else if (!searchable && e.key === 'Home') { e.preventDefault(); setActive(0); }
+    else if (!searchable && e.key === 'End') { e.preventDefault(); setActive(n - 1); }
+    else if (e.key === 'Enter' || (!searchable && e.key === ' ')) { e.preventDefault(); pick(active); }
     else if (e.key === 'Tab') closeList();
   }
 
@@ -240,22 +249,31 @@ export function Select({
         <svg width="12" height="8" viewBox="0 0 12 8" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M1 1.5l5 5 5-5" /></svg>
       </button>
       {shown && (
-        <ul
-          ref={list} id={`${uid}-list`} role="listbox" popover="manual"
-          className={`sel-list${pos.up ? ' up' : ''}`} data-closing={!open || undefined}
+        <div
+          ref={list} popover="manual"
+          className={`sel-list${pos.up ? ' up' : ''}${searchable ? ' has-search' : ''}`} data-closing={!open || undefined}
           style={{ left: pos.left, width: pos.width, top: pos.top, bottom: pos.bottom, maxHeight: pos.maxH }}
         >
-          {options.map((o, i) => (
-            <li
-              key={o.value} id={`${uid}-${i}`} role="option" className="sel-opt"
-              aria-selected={i === sel} data-active={i === active || undefined}
-              onPointerMove={() => setActive(i)} onClick={() => pick(i)}
-            >
-              <span>{o.label}</span>
-              {i === sel && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true"><path d="M5 12l5 5 9-10" /></svg>}
-            </li>
-          ))}
-        </ul>
+          {searchable && (
+            <input
+              ref={search} type="search" className="sel-search" placeholder="Cari…" aria-label="Cari pilihan" autoComplete="off"
+              value={query} onChange={(e) => { setQuery(e.target.value); setActive(0); }} onKeyDown={onKey}
+            />
+          )}
+          <ul ref={ul} id={`${uid}-list`} role="listbox" className="sel-ul">
+            {view.map((o, i) => (
+              <li
+                key={o.value} id={`${uid}-${i}`} role="option" className="sel-opt"
+                aria-selected={o.value === value} data-active={i === active || undefined}
+                onPointerMove={() => setActive(i)} onClick={() => pick(i)}
+              >
+                <span>{o.label}</span>
+                {o.value === value && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true"><path d="M5 12l5 5 9-10" /></svg>}
+              </li>
+            ))}
+            {!view.length && <li className="sel-empty" role="presentation">Tidak ditemukan</li>}
+          </ul>
+        </div>
       )}
     </>
   );
