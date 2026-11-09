@@ -67,8 +67,18 @@ export function menuHtml(cats: Cat[], rows: Row[]) {
   }).join('');
 }
 
-/** Mengembalikan HTML menu dari database, atau null kalau tidak bisa dimuat (pakai cadangan statis). */
-export async function loadMenuHtml(): Promise<string | null> {
+/** Pilihan perawatan di form booking: semua layanan aktif, urut kategori lalu urutan item. */
+export function chipsHtml(cats: Cat[], rows: Row[]) {
+  const order = new Map(cats.map((c, i) => [c.id, i]));
+  return rows
+    .filter((r) => order.has(r.category_id))
+    .sort((a, b) => order.get(a.category_id)! - order.get(b.category_id)! || a.sort - b.sort)
+    .map((r) => `<label class="chip"><input type="checkbox" value="${esc(r.name)}"><span>${esc(r.name)}</span></label>`)
+    .join('');
+}
+
+/** Mengembalikan HTML menu dan chip booking dari database, atau null kalau tidak bisa dimuat (pakai cadangan statis). */
+export async function loadMenu(): Promise<{ menu: string; chips: string } | null> {
   if (!supabase) return null;
   const [c, i] = await Promise.all([
     supabase.from('categories').select('id,name,sort').neq('id', 'produk').order('sort'),
@@ -77,5 +87,6 @@ export async function loadMenuHtml(): Promise<string | null> {
       .eq('is_service', true).eq('active', true),
   ]);
   if (c.error || i.error || !i.data?.length) return null;
-  return menuHtml(c.data as Cat[], i.data as Row[]) || null;
+  const menu = menuHtml(c.data as Cat[], i.data as Row[]);
+  return menu ? { menu, chips: chipsHtml(c.data as Cat[], i.data as Row[]) } : null;
 }

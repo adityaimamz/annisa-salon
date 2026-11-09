@@ -392,7 +392,7 @@ const jsonLd = {
 
 <script>
 import { supabase } from '../lib/supabase';
-import { loadMenuHtml } from '../lib/menu';
+import { loadMenu } from '../lib/menu';
 import { loadGalleryHtml } from '../lib/galeri';
 
 (() => {
@@ -450,8 +450,12 @@ import { loadGalleryHtml } from '../lib/galeri';
   // Layanan berharga contoh tampil "Tanya harga". HTML di atas jadi cadangan kalau fetch gagal.
   (async () => {
     const menu = document.querySelector('.menu');
-    const html = await loadMenuHtml().catch(() => null);
-    if (!menu || !html) return;
+    const loaded = await loadMenu().catch(() => null);
+    if (!menu || !loaded) return;
+    const html = loaded.menu;
+    // Pilihan perawatan di form booking ikut katalog yang sama
+    const chips = document.getElementById('chips');
+    if (chips && loaded.chips) chips.innerHTML = loaded.chips;
     const seen = [...menu.children].map((g) => g.classList.contains('in'));
     menu.innerHTML = html;
     [...menu.children].forEach((g, i) => {
