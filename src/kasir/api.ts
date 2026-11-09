@@ -120,19 +120,24 @@ const txFromRow = (r: TxRow): Tx => ({
   })),
 });
 
-/** Koreksi transaksi (owner; ditegakkan RLS): hanya data pelanggan dan terapis, nominal tidak diubah. */
+/** Koreksi transaksi penuh (owner; RPC update_transaction): metode bayar, diskon, dan seluruh baris layanan. */
 export async function updateTransaction(
-  id: number, p: { customer: string; wa: string; lines: { rowId: number; terapisId: number | null }[] },
-) {
-  const t = await db().from('transactions')
-    .update({ customer: p.customer || null, customer_wa: p.wa || null }).eq('id', id).select('id');
-  fail(t.error);
-  if (!t.data?.length) throw new Error('Transaksi tidak ditemukan atau Anda tidak berhak mengubahnya.');
-  for (const l of p.lines) {
-    const r = await db().from('transaction_items').update({ therapist_id: l.terapisId }).eq('id', l.rowId).select('id');
-    fail(r.error);
-    if (!r.data?.length) throw new Error('Sebagian baris gagal diubah. Muat ulang lalu coba lagi.');
-  }
+  id: number,
+  p: {
+    customer: string; wa: string; discount: number; pay: PayMethod;
+    lines: { catalogId: string | null; cat: string | null; name: string; price: number; qty: number; terapisId: number | null }[];
+  },
+): Promise<Tx> {
+  const { error } = await db().rpc('update_transaction', {
+    p_id: id, p_customer: p.customer, p_customer_wa: p.wa, p_discount: p.discount, p_pay: p.pay,
+    p_items: p.lines.map((l) => ({
+      catalog_item_id: l.catalogId, category_id: l.cat, name: l.name, price: l.price, qty: l.qty, therapist_id: l.terapisId,
+    })),
+  });
+  fail(error);
+  const { data, error: e2 } = await db().from('transactions').select(SELECT_TX).eq('id', id).single();
+  fail(e2);
+  return txFromRow(data as unknown as TxRow);
 }
 
 export async function deleteTransaction(id: number) {

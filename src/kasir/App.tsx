@@ -189,7 +189,7 @@ function Shell({ userId }: { userId: string }) {
         <div hidden={current !== 'kasir'} style={{ height: '100%' }}>
           <KasirView cats={cats} items={items} therapists={therapists} profile={profile} onPaid={() => setRefreshKey((k) => k + 1)} onQueued={flush} />
         </div>
-        {current === 'transaksi' && <TransaksiView refreshKey={refreshKey} therapists={therapists} />}
+        {current === 'transaksi' && <TransaksiView refreshKey={refreshKey} therapists={therapists} items={items} />}
         {current === 'keuangan' && <KeuanganView cats={cats} refreshKey={refreshKey} onOpenPengeluaran={() => setView('pengeluaran')} />}
         {current === 'pengeluaran' && <PengeluaranView refreshKey={refreshKey} />}
         {current === 'harga' && <HargaView cats={cats} items={items} onSave={save} onDelete={remove} readOnly={!isOwner} />}

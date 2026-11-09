@@ -514,3 +514,13 @@ body{background:var(--paper);font-size:15px;overflow:hidden}
 .cat-pill[aria-pressed="true"]{background:var(--green);border-color:var(--green);color:var(--cream)}
 .cat-pill[aria-pressed="true"] b{color:var(--cream)}
 .v-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+
+/* ---------- edit transaksi ---------- */
+.et-line{display:grid;gap:8px;padding:12px;margin-bottom:10px;border:1px solid var(--line);border-radius:12px;background:var(--paper-2)}
+.et-line-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+.et-line .row2{align-items:center}
+.et-line .mini-step{justify-self:start}
+.et-total{display:flex;flex-direction:column;justify-content:flex-end;gap:2px}
+.et-total span{font-size:14px;font-weight:600}
+.et-total b{font-size:22px;font-variant-numeric:tabular-nums}
+.et-total small{color:var(--ink-3);font-size:12.5px}

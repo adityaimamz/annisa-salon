@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { deleteTransaction, loadTransactions, updateTransaction } from './api';
 import DateRange, { defaultRange } from './DateRange';
-import { dayKey, fmtDay, fmtTime, rp, startOfDay } from './format';
-import type { Therapist, Tx } from './types';
+import { dayKey, fmtDay, fmtTime, money, num, rp, startOfDay } from './format';
+import type { Item, PayMethod, Therapist, Tx } from './types';
 import { CloseBtn, ReceiptSheet, Select, Sheet, useConfirm, useToast } from './ui';
 
 type Sort = 'new' | 'old' | 'big' | 'small';
 const csvCell = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
 type Range = 'today' | 'yesterday' | '7' | '30' | 'month' | 'lastmonth' | 'custom';
 
-export default function TransaksiView({ refreshKey, therapists }: { refreshKey: number; therapists: Therapist[] }) {
+export default function TransaksiView({ refreshKey, therapists, items }: { refreshKey: number; therapists: Therapist[]; items: Item[] }) {
   const toast = useToast();
   const confirm = useConfirm();
   const [range, setRange] = useState<Range>('today');
@@ -71,14 +71,16 @@ export default function TransaksiView({ refreshKey, therapists }: { refreshKey: 
     };
     return (all ?? []).filter((t) =>
       t.at >= start.getTime() && t.at < end.getTime() && t.total >= min &&
-      (!pay || t.pay === pay) && (!staffF || t.kasir === staffF || t.lines.some((l) => l.terapis === staffF)) &&
+      (!pay || t.pay === pay) && (!staffF || t.lines.some((l) => l.terapis === staffF)) &&
       (!needle || `${t.no} ${t.cust} ${t.wa} ${t.lines.map((l) => l.name).join(' ')}`.toLowerCase().includes(needle)),
     ).sort(by[sort]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [all, range, from, to, q, pay, staffF, minAmt, sort]);
 
-  // kasir dan terapis adalah orang yang sama, jadi satu filter: cocok bila bertindak sebagai kasir atau terapis
-  const staffOpts = [...new Set((all ?? []).flatMap((t) => [t.kasir, ...t.lines.map((l) => l.terapis)]).filter((x): x is string => !!x && x !== '-'))].sort();
+  // karyawan = terapis (yang mengerjakan layanan sekaligus dicatat sebagai kasir). Daftar dari menu Terapis,
+  // ditambah terapis nonaktif yang masih tercatat di transaksi lama.
+  const staffOpts = [...new Set([...therapists.map((t) => t.name), ...(all ?? []).flatMap((t) => t.lines.map((l) => l.terapis))]
+    .filter((x): x is string => !!x))].sort((a, b) => a.localeCompare(b, 'id'));
   const filtered = !!(q.trim() || pay || staffF || minAmt);
   const dateSorted = sort === 'new' || sort === 'old';
 
@@ -175,52 +177,75 @@ export default function TransaksiView({ refreshKey, therapists }: { refreshKey: 
       </div>
       <ReceiptSheet tx={sel} fresh={false} onClose={() => setSel(null)}
         onEdit={(t) => { setSel(null); setEditing(t); }} onDelete={remove} />
-      <EditSheet tx={editing} therapists={therapists} onClose={() => setEditing(null)}
+      <EditSheet tx={editing} therapists={therapists} items={items} onClose={() => setEditing(null)}
         onSaved={(t) => { setAll((cur) => (cur ?? []).map((x) => (x.id === t.id ? t : x))); setSel(t); toast('Transaksi diperbarui'); }} />
     </section>
   );
 }
 
-function EditSheet({ tx, therapists, onClose, onSaved }: {
-  tx: Tx | null; therapists: Therapist[]; onClose: () => void; onSaved: (t: Tx) => void;
+interface EditLine { key: number; catalogId: string | null; cat: string | null; name: string; price: string; qty: number; terapis: string }
+const PAYS: PayMethod[] = ['Tunai', 'QRIS', 'Transfer'];
+let lineKey = 0;
+
+function EditSheet({ tx, therapists, items, onClose, onSaved }: {
+  tx: Tx | null; therapists: Therapist[]; items: Item[]; onClose: () => void; onSaved: (t: Tx) => void;
 }) {
   const [cust, setCust] = useState('');
   const [wa, setWa] = useState('');
-  const [terapis, setTerapis] = useState<string[]>([]);
+  const [pay, setPay] = useState<PayMethod>('Tunai');
+  const [disc, setDisc] = useState('');
+  const [lines, setLines] = useState<EditLine[]>([]);
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!tx) return;
-    setCust(tx.cust); setWa(tx.wa); setErr('');
-    setTerapis(tx.lines.map((l) => (l.terapisId != null ? String(l.terapisId) : '')));
+    setCust(tx.cust); setWa(tx.wa); setErr(''); setPay(tx.pay);
+    setDisc(tx.disc ? String(tx.disc) : '');
+    setLines(tx.lines.map((l) => ({
+      key: ++lineKey, catalogId: l.id, cat: l.cat, name: l.name, price: String(l.price), qty: l.qty,
+      terapis: l.terapisId != null ? String(l.terapisId) : '',
+    })));
   }, [tx]);
 
-  // Terapis yang sudah dinonaktifkan tetap muncul bila masih tercatat di baris ini.
-  const optionsFor = (cur: Tx['lines'][number]) => {
+  // Terapis nonaktif yang masih tercatat di transaksi ini tetap muncul sebagai pilihan.
+  const therapistOpts = (cur: string) => {
     const opts = therapists.map((t) => ({ value: String(t.id), label: t.name }));
-    if (cur.terapisId != null && cur.terapis && !opts.some((o) => o.value === String(cur.terapisId))) {
-      opts.push({ value: String(cur.terapisId), label: cur.terapis });
+    if (cur && !opts.some((o) => o.value === cur)) {
+      const old = tx?.lines.find((l) => String(l.terapisId) === cur);
+      opts.push({ value: cur, label: old?.terapis ?? `Terapis #${cur}` });
     }
-    return opts;
+    return [{ value: '', label: 'Tanpa terapis' }, ...opts];
   };
-  const nameOf = (id: string, cur: Tx['lines'][number]) =>
-    optionsFor(cur).find((o) => o.value === id)?.label ?? null;
+
+  const patch = (key: number, p: Partial<EditLine>) => setLines((cur) => cur.map((l) => (l.key === key ? { ...l, ...p } : l)));
+  // mengetik nama yang sama dengan item katalog mengisi harga dan kategorinya
+  function setName(l: EditLine, name: string) {
+    const hit = items.find((i) => i.name.toLowerCase() === name.trim().toLowerCase());
+    if (hit) patch(l.key, { name, catalogId: hit.id, cat: hit.cat, price: hit.price != null ? String(hit.price) : l.price });
+    else patch(l.key, { name, catalogId: null });
+  }
+
+  const priceOf = (l: EditLine) => num(l.price);
+  const sub = lines.reduce((a, l) => a + priceOf(l) * l.qty, 0);
+  const discount = Math.min(num(disc), sub);
+  const total = sub - discount;
+  const valid = lines.length > 0 && lines.every((l) => l.name.trim());
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!tx || busy) return;
-    const rows = tx.lines.map((l, i) => ({ l, i })).filter(({ l }) => l.rowId != null);
+    if (!valid) return setErr('Setiap layanan harus punya nama.');
     setBusy(true); setErr('');
     try {
-      await updateTransaction(tx.id, {
-        customer: cust.trim(), wa: wa.trim(),
-        lines: rows.map(({ l, i }) => ({ rowId: l.rowId!, terapisId: terapis[i] ? Number(terapis[i]) : null })),
+      const updated = await updateTransaction(tx.id, {
+        customer: cust.trim(), wa: wa.trim(), discount, pay,
+        lines: lines.map((l) => ({
+          catalogId: l.catalogId, cat: l.cat, name: l.name.trim(), price: priceOf(l), qty: l.qty,
+          terapisId: l.terapis ? Number(l.terapis) : null,
+        })),
       });
-      onSaved({
-        ...tx, cust: cust.trim(), wa: wa.trim(),
-        lines: tx.lines.map((l, i) => ({ ...l, terapisId: terapis[i] ? Number(terapis[i]) : null, terapis: terapis[i] ? nameOf(terapis[i], l) : null })),
-      });
+      onSaved(updated);
       onClose();
     } catch (ex) { setErr((ex as Error).message); }
     finally { setBusy(false); }
@@ -233,26 +258,64 @@ function EditSheet({ tx, therapists, onClose, onSaved }: {
           <CloseBtn onClick={onClose} />
           <h3 id="editTxTitle">Edit transaksi</h3>
           <p className="role-note" style={{ marginTop: 16 }}>
-            {tx.no} · Hanya terapis dan data pelanggan yang bisa diubah. Untuk mengoreksi layanan atau nominal, hapus transaksi lalu catat ulang.
+            {tx.no} · Ubah layanan, harga, jumlah, terapis, diskon, atau metode bayar. Total dihitung ulang saat disimpan.
           </p>
-          <div className="field">
-            <label htmlFor="etCust">Nama pelanggan</label>
-            <input className="input" id="etCust" value={cust} onChange={(e) => setCust(e.target.value)} />
+          <div className="field row2">
+            <div><label htmlFor="etCust">Nama pelanggan</label>
+              <input className="input" id="etCust" value={cust} onChange={(e) => setCust(e.target.value)} /></div>
+            <div><label htmlFor="etWa">No. WA <span className="opt">(opsional)</span></label>
+              <input className="input" id="etWa" inputMode="tel" value={wa} onChange={(e) => setWa(e.target.value)} /></div>
           </div>
+
           <div className="field">
-            <label htmlFor="etWa">No. WA <span className="opt">(opsional)</span></label>
-            <input className="input" id="etWa" inputMode="tel" value={wa} onChange={(e) => setWa(e.target.value)} />
-          </div>
-          {tx.lines.map((l, i) => (l.rowId != null && (l.cat !== 'produk' || l.terapisId != null)) && (
-            <div className="field" key={l.rowId}>
-              <label htmlFor={`etTp${i}`}>{l.name}{l.qty > 1 ? ` ×${l.qty}` : ''} <span className="opt">(terapis)</span></label>
-              <Select id={`etTp${i}`} className="input" value={terapis[i] ?? ''} placeholder="Pilih terapis"
-                onChange={(v) => setTerapis((c) => c.map((x, idx) => (idx === i ? v : x)))} options={optionsFor(l)} />
+            <span className="label">Metode bayar</span>
+            <div className="chips">
+              {PAYS.map((m) => (
+                <label className="chip" key={m}><input type="radio" name="etPay" value={m} checked={pay === m} onChange={() => setPay(m)} /><span>{m}</span></label>
+              ))}
             </div>
-          ))}
+          </div>
+
+          <div className="field">
+            <span className="label">Layanan</span>
+            <datalist id="etItems">{items.map((i) => <option key={i.id} value={i.name} />)}</datalist>
+            {lines.map((l, i) => (
+              <div className="et-line" key={l.key}>
+                <div className="et-line-head">
+                  <input className="input" list="etItems" aria-label={`Nama layanan ${i + 1}`} placeholder="Nama layanan" value={l.name}
+                    onChange={(e) => setName(l, e.target.value)} />
+                  <button className="btn btn-line btn-sm btn-danger" type="button" aria-label={`Hapus ${l.name || 'layanan'}`}
+                    disabled={lines.length === 1} onClick={() => setLines((c) => c.filter((x) => x.key !== l.key))}>Hapus</button>
+                </div>
+                <div className="row2">
+                  <input className="input" inputMode="numeric" aria-label={`Harga ${l.name || 'layanan'}`} placeholder="Harga" value={l.price ? 'Rp' + money(num(l.price)) : ''}
+                    onChange={(e) => patch(l.key, { price: String(num(e.target.value)) })} />
+                  <div className="mini-step" role="group" aria-label={`Jumlah ${l.name || 'layanan'}`}>
+                    <button type="button" aria-label="Kurangi" disabled={l.qty <= 1} onClick={() => patch(l.key, { qty: l.qty - 1 })}>−</button>
+                    <span className="qty">{l.qty}</span>
+                    <button type="button" aria-label="Tambah" onClick={() => patch(l.key, { qty: l.qty + 1 })}>+</button>
+                  </div>
+                </div>
+                {l.cat !== 'produk' && (
+                  <Select className="input" ariaLabel={`Terapis ${l.name || 'layanan'}`} value={l.terapis} placeholder="Tanpa terapis"
+                    onChange={(v) => patch(l.key, { terapis: v })} options={therapistOpts(l.terapis)} />
+                )}
+              </div>
+            ))}
+            <button className="btn btn-line btn-sm" type="button"
+              onClick={() => setLines((c) => [...c, { key: ++lineKey, catalogId: null, cat: null, name: '', price: '', qty: 1, terapis: '' }])}>+ Tambah layanan</button>
+          </div>
+
+          <div className="field row2">
+            <div><label htmlFor="etDisc">Diskon <span className="opt">(Rp)</span></label>
+              <input className="input" id="etDisc" inputMode="numeric" placeholder="Rp0" value={disc ? 'Rp' + money(num(disc)) : ''}
+                onChange={(e) => setDisc(String(num(e.target.value)))} /></div>
+            <div className="et-total"><span>Total</span><b>{rp(total)}</b>{discount > 0 && <small>Subtotal {rp(sub)}</small>}</div>
+          </div>
+
           {err && <p className="field-err" role="alert">{err}</p>}
           <div className="sheet-actions" style={{ marginTop: 16 }}>
-            <button className="btn btn-green" type="submit" disabled={busy}>{busy ? 'Menyimpan…' : 'Simpan perubahan'}</button>
+            <button className="btn btn-green" type="submit" disabled={busy || !valid}>{busy ? 'Menyimpan…' : 'Simpan perubahan'}</button>
           </div>
         </form>
       )}
