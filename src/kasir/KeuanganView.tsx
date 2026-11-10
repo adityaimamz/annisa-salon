@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { loadExpenses, loadTransactions } from './api';
+import { getPeriodOpeningCash, loadExpenses, loadTransactions } from './api';
 import DateRange, { defaultRange } from './DateRange';
 import DayChart, { type DayPoint } from './DayChart';
 import { dayKey, fmtDay, rp, rpk, startOfDay } from './format';
@@ -25,6 +25,7 @@ export default function KeuanganView({ cats, refreshKey, onOpenPengeluaran }: { 
   const [editing, setEditing] = useState<Expense | null>(null);
   const openExp = (x: Expense | null) => { setEditing(x); setExpOpen(true); };
   const [version, setVersion] = useState(0);
+  const [modalAwal, setModalAwal] = useState<number>(0);
   const today = startOfDay(new Date());
 
   useEffect(() => {
@@ -42,6 +43,27 @@ export default function KeuanganView({ cats, refreshKey, onOpenPengeluaran }: { 
       .catch((e) => toast(`Gagal memuat data keuangan: ${e.message}`, true));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshKey, version, range === 'custom' ? from : '', range === 'custom' ? to : '']);
+
+  useEffect(() => {
+    let days: Date[];
+    const f = from ? new Date(`${from}T00:00:00`) : null, u = to ? new Date(`${to}T00:00:00`) : null;
+    if (range === 'custom' && f && u && u >= f) {
+      const len = Math.min(MAX_DAYS, Math.round((u.getTime() - f.getTime()) / 864e5) + 1);
+      days = Array.from({ length: len }, (_, i) => new Date(f.getFullYear(), f.getMonth(), f.getDate() + i));
+    } else if (range === 'lastmonth') {
+      const first = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      const len = new Date(today.getFullYear(), today.getMonth(), 0).getDate();
+      days = Array.from({ length: len }, (_, i) => new Date(first.getFullYear(), first.getMonth(), i + 1));
+    } else {
+      const n = range === 'month' ? today.getDate() : Number(range);
+      days = Array.from({ length: n }, (_, i) => { const x = new Date(today); x.setDate(x.getDate() - (n - 1 - i)); return x; });
+    }
+    const startDay = dayKey(days[0]);
+    const endDay = dayKey(days[days.length - 1]);
+    getPeriodOpeningCash(startDay, endDay)
+      .then(setModalAwal)
+      .catch(() => setModalAwal(0));
+  }, [range, from, to, refreshKey, version, today]);
 
   const d = useMemo(() => {
     let days: Date[];
@@ -131,7 +153,24 @@ export default function KeuanganView({ cats, refreshKey, onOpenPengeluaran }: { 
       {range === 'custom' && <div className="pad" style={{ paddingBottom: 0 }}><DateRange from={from} to={to} onChange={(a, b) => { setFrom(a); setTo(b); }} /></div>}
       <div className="pad">
         <div className="kpis">
-          <div className="kpi hero"><span>Laba bersih</span><b>{rp(inc - out)}</b><small>{inc ? `Margin ${Math.round(((inc - out) / inc) * 100)}%` : ''}</small></div>
+          <div className="kpi hero">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <span>Total Hasil Kas Bersih</span>
+              {modalAwal > 0 && unitFilter !== 'gbee' && (
+                <span style={{ fontSize: 11.5, opacity: 0.85 }}>Sesuai Buku Kas</span>
+              )}
+            </div>
+            <b style={{ fontVariantNumeric: 'tabular-nums' }}>
+              {rp(inc - out + (unitFilter !== 'gbee' ? modalAwal : 0))}
+            </b>
+            <small>
+              {modalAwal > 0 && unitFilter !== 'gbee' ? (
+                <>Laba usaha {rp(inc - out)} · Modal awal (+M) +{rp(modalAwal)}</>
+              ) : (
+                <>{inc ? `Margin ${Math.round(((inc - out) / inc) * 100)}%` : ''}</>
+              )}
+            </small>
+          </div>
           <div className="kpi">
             <span><i className="sw" style={{ background: 'var(--c-in)' }} />Pemasukan</span>
             <b>{rp(inc)}</b>
@@ -139,8 +178,23 @@ export default function KeuanganView({ cats, refreshKey, onOpenPengeluaran }: { 
               {unitFilter === 'all' ? `Salon: ${rpk(incSalon)} · Gbee: ${rpk(incGbee)}` : delta(inc, pin)}
             </small>
           </div>
-          <div className="kpi"><span><i className="sw" style={{ background: 'var(--c-out)' }} />Pengeluaran</span><b>{rp(out)}</b><small className={tone(out, pout, false)}>{delta(out, pout)}</small></div>
-          <div className="kpi"><span>Transaksi</span><b>{tx.length}</b><small>{tx.length ? `Rata-rata ${rp(inc / tx.length)}` : ''}</small></div>
+          <div className="kpi">
+            <span><i className="sw" style={{ background: 'var(--c-out)' }} />Pengeluaran</span>
+            <b>{rp(out)}</b>
+            <small className={tone(out, pout, false)}>{delta(out, pout)}</small>
+          </div>
+          {modalAwal > 0 && unitFilter !== 'gbee' && (
+            <div className="kpi">
+              <span>Modal Kas Awal (M)</span>
+              <b style={{ fontVariantNumeric: 'tabular-nums' }}>{rp(modalAwal)}</b>
+              <small>Saldo kas awal periode</small>
+            </div>
+          )}
+          <div className="kpi">
+            <span>Transaksi</span>
+            <b>{tx.length}</b>
+            <small>{tx.length ? `Rata-rata ${rp(inc / tx.length)}` : ''}</small>
+          </div>
         </div>
 
         <div className="panels">

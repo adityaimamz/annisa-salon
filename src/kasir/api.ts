@@ -272,6 +272,19 @@ export async function saveDailyCashBook(p: {
   return data as DailyCashSummary;
 }
 
+export async function getPeriodOpeningCash(startDay: string, endDay: string): Promise<number> {
+  const { data, error } = await db()
+    .from('daily_cash_books')
+    .select('opening_cash')
+    .gte('day', startDay)
+    .lte('day', endDay)
+    .order('day', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (error || !data) return 0;
+  return (data as { opening_cash: number }).opening_cash ?? 0;
+}
+
 /* ---------- karyawan (hanya owner; ditegakkan RPC + RLS) ---------- */
 export async function listStaff(): Promise<StaffMember[]> {
   const { data, error } = await db().rpc('list_staff');
