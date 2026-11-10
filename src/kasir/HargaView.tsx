@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { money, num, rp, slugify } from './format';
-import type { Category, Item, Variant } from './types';
+import type { BusinessUnit, Category, Item, Variant } from './types';
 import { CloseBtn, Icon, Select, Sheet, useConfirm, useToast } from './ui';
 
 interface Props {
@@ -97,6 +97,7 @@ export default function HargaView({ cats, items, onSave, onDelete, readOnly = fa
                     <div className="pr-name">
                       <b>{it.name}</b>{it.k && <span className="k">{it.k}</span>}
                       <span className="tags">
+                        {it.unit === 'gbee' && <span className="tagx gbee" style={{ background: '#fdf2f8', color: '#db2777', borderColor: '#fbcfe8' }}>✨ Gbee</span>}
                         {it.off && <span className="tagx off">Disembunyikan</span>}
                       </span>
                     </div>
@@ -199,6 +200,7 @@ function ItemEditor({ target, kind, cats, defaultCat, nextSort, onClose, onSave,
   const noun = kind === 'layanan' ? 'layanan' : 'produk';
   const [name, setName] = useState('');
   const [catId, setCatId] = useState('rambut');
+  const [unit, setUnit] = useState<BusinessUnit>('salon');
   const [k, setK] = useState('');
   const [desc, setDesc] = useState('');
   const [mode, setMode] = useState<'single' | 'multi'>('single');
@@ -212,6 +214,7 @@ function ItemEditor({ target, kind, cats, defaultCat, nextSort, onClose, onSave,
   useEffect(() => {
     if (!target) return;
     setName(it?.name ?? ''); setCatId(it?.cat ?? defaultCat); setK(it?.k ?? ''); setDesc(it?.desc ?? '');
+    setUnit(it?.unit ?? (kind === 'produk' || it?.cat === 'produk' || it?.id === 'facial-gbee' ? 'gbee' : 'salon'));
     setMode(it?.variants ? 'multi' : 'single'); setPrice(it?.price ? money(it.price) : '');
     setWebPrice(it?.webPrice ? money(it.webPrice) : '');
     setVlabel(it?.vlabel ?? '');
@@ -235,6 +238,7 @@ function ItemEditor({ target, kind, cats, defaultCat, nextSort, onClose, onSave,
     const base = {
       id: it?.id ?? `${slugify(n)}-${Date.now().toString(36)}`,
       cat: catId, name: n, k: k.trim() || undefined, service: catId !== 'produk',
+      unit,
       desc: catId !== 'produk' ? desc.trim() || undefined : it?.desc,
       off: it?.off ?? false, sort: it?.sort ?? nextSort,
     };
@@ -280,6 +284,13 @@ function ItemEditor({ target, kind, cats, defaultCat, nextSort, onClose, onSave,
           )}
           <div><label htmlFor="fK">Keterangan <span className="opt">(opsional)</span></label>
             <input className="input" id="fK" placeholder={kind === 'layanan' ? 'Misal: by Gbee' : 'Misal: 60 ml'} value={k} onChange={(e) => setK(e.target.value)} /></div>
+        </div>
+        <div className="field">
+          <span className="label">Unit Bisnis Arus Kas</span>
+          <div className="chips">
+            <label className="chip"><input type="radio" name="funit" checked={unit === 'salon'} onChange={() => setUnit('salon')} /><span>💇 Salon</span></label>
+            <label className="chip"><input type="radio" name="funit" checked={unit === 'gbee'} onChange={() => setUnit('gbee')} /><span>✨ Gbee</span></label>
+          </div>
         </div>
         {kind === 'layanan' && (
           <div className="field">
