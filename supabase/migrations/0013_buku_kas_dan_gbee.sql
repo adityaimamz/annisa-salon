@@ -364,3 +364,4 @@ revoke execute on function public.get_daily_cash_summary(date) from public, anon
 revoke execute on function public.save_daily_cash_book(date, integer, integer, integer, text, boolean) from public, anon;
 grant execute on function public.get_daily_cash_summary(date) to authenticated;
 grant execute on function public.save_daily_cash_book(date, integer, integer, integer, text, boolean) to authenticated;
+
