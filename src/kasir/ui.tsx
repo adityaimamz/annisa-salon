@@ -45,8 +45,8 @@ export const Icon = {
 
 /* ---------- dialog ---------- */
 export function Sheet({
-  open, onClose, labelledBy, children,
-}: { open: boolean; onClose: () => void; labelledBy: string; children: ReactNode }) {
+  open, onClose, labelledBy, children, className = '',
+}: { open: boolean; onClose: () => void; labelledBy: string; children: ReactNode; className?: string }) {
   const ref = useRef<HTMLDialogElement>(null);
   // simpan isi terakhir supaya animasi keluar tidak menampilkan kartu kosong
   const last = useRef<ReactNode>(null);
@@ -71,7 +71,7 @@ export function Sheet({
   return (
     <dialog
       ref={ref}
-      className="sheet"
+      className={`sheet ${className}`.trim()}
       data-closing={closing || undefined}
       aria-labelledby={labelledBy}
       onClose={onClose}

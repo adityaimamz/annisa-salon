@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { deleteTransaction, loadTransactions, updateTransaction } from './api';
+import { deleteTransaction, getDailyCashSummary, loadTransactions, saveDailyCashBook, updateTransaction } from './api';
 import BukuKasSheet from './BukuKasSheet';
 import DateRange, { defaultRange } from './DateRange';
 import { dayKey, fmtDay, fmtTime, money, num, rp, startOfDay } from './format';
-import type { Item, PayMethod, Therapist, Tx } from './types';
+import type { DailyCashSummary, Item, PayMethod, Therapist, Tx } from './types';
 import { CloseBtn, ReceiptSheet, Select, Sheet, useConfirm, useToast } from './ui';
 
 type Sort = 'new' | 'old' | 'big' | 'small';
@@ -37,6 +37,62 @@ export default function TransaksiView({ refreshKey, therapists, items }: { refre
   const [editing, setEditing] = useState<Tx | null>(null);
   const [bukuKasOpen, setBukuKasOpen] = useState(false);
   const [unitF, setUnitF] = useState<'all' | 'salon' | 'gbee'>('all');
+  const [cashSummary, setCashSummary] = useState<DailyCashSummary | null>(null);
+  const [editModal, setEditModal] = useState(false);
+  const [modalInput, setModalInput] = useState('');
+  const [savingModal, setSavingModal] = useState(false);
+  const [cashKey, setCashKey] = useState(0);
+
+  const today = startOfDay(new Date());
+
+  const activeCashDay = useMemo(() => {
+    if (range === 'yesterday') {
+      const d = new Date(today);
+      d.setDate(d.getDate() - 1);
+      return dayKey(d);
+    }
+    if (range === 'custom' && from) {
+      return from;
+    }
+    return dayKey(today);
+  }, [range, from, today]);
+
+  useEffect(() => {
+    let ignore = false;
+    getDailyCashSummary(activeCashDay)
+      .then((res) => {
+        if (!ignore) {
+          setCashSummary(res);
+          setModalInput(money(res.opening_cash));
+          setEditModal(false);
+        }
+      })
+      .catch((e) => console.error(e));
+    return () => { ignore = true; };
+  }, [activeCashDay, refreshKey, cashKey]);
+
+  async function handleSaveModal() {
+    if (!cashSummary || savingModal) return;
+    setSavingModal(true);
+    try {
+      const newOpening = num(modalInput);
+      const res = await saveDailyCashBook({
+        day: activeCashDay,
+        openingCash: newOpening,
+        cashWithdrawn: cashSummary.cash_withdrawn,
+        closingCashActual: cashSummary.closing_cash_actual,
+        notes: cashSummary.notes ?? undefined,
+        isClosed: cashSummary.is_closed,
+      });
+      setCashSummary(res);
+      setEditModal(false);
+      toast(`Modal awal kasir berhasil disimpan: ${rp(newOpening)}`);
+    } catch (e) {
+      toast(`Gagal menyimpan modal: ${(e as Error).message}`, true);
+    } finally {
+      setSavingModal(false);
+    }
+  }
 
   async function remove(t: Tx) {
     if (!(await confirm({
@@ -51,7 +107,6 @@ export default function TransaksiView({ refreshKey, therapists, items }: { refre
       toast(`Transaksi ${t.no} dihapus`);
     } catch (e) { toast(`Gagal menghapus: ${(e as Error).message}`, true); }
   }
-  const today = startOfDay(new Date());
 
   useEffect(() => {
     // cukup untuk semua rentang: 30 hari terakhir dan awal bulan lalu, mana yang lebih lama
@@ -173,6 +228,90 @@ export default function TransaksiView({ refreshKey, therapists, items }: { refre
           <div><span>✨ Porsi Gbee</span><b style={{ color: '#E65100' }}>{rp(sumGbee)}</b></div>
           <div><span>Transaksi</span><b>{list.length}</b></div>
           <div><span>Rata-rata</span><b>{rp(list.length ? sum / list.length : 0)}</b></div>
+          <div className="sum-modal" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>💵 Modal Kasir (M)</span>
+              {!editModal && (
+                <button
+                  type="button"
+                  className="linkbtn"
+                  style={{ fontSize: 11.5, padding: '0 2px', fontWeight: 600 }}
+                  onClick={() => setEditModal(true)}
+                  title="Ubah modal awal kasir hari ini"
+                >
+                  ✏️ Ubah
+                </button>
+              )}
+            </div>
+
+            {editModal ? (
+              <div style={{ marginTop: 2, display: 'flex', gap: 4, alignItems: 'center' }}>
+                <label className="money" style={{ flex: 1, minWidth: 0, margin: 0 }}>
+                  <span style={{ fontSize: 11 }}>Rp</span>
+                  <input
+                    className="input"
+                    inputMode="numeric"
+                    autoFocus
+                    style={{ height: 28, fontSize: 13, padding: '2px 4px', fontWeight: 600 }}
+                    value={money(num(modalInput))}
+                    onChange={(e) => setModalInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveModal();
+                      if (e.key === 'Escape') setEditModal(false);
+                    }}
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="btn btn-green btn-sm"
+                  style={{ padding: '2px 8px', height: 28, fontSize: 11 }}
+                  onClick={handleSaveModal}
+                  disabled={savingModal}
+                >
+                  {savingModal ? '...' : 'OK'}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-line btn-sm"
+                  style={{ padding: '2px 6px', height: 28, fontSize: 11 }}
+                  onClick={() => {
+                    setModalInput(money(cashSummary?.opening_cash ?? 0));
+                    setEditModal(false);
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                <b style={{ fontVariantNumeric: 'tabular-nums' }}>{rp(cashSummary?.opening_cash ?? 0)}</b>
+                <button
+                  type="button"
+                  className="linkbtn"
+                  style={{ fontSize: 11, padding: 0 }}
+                  onClick={() => setBukuKasOpen(true)}
+                >
+                  Buku Kas →
+                </button>
+              </div>
+            )}
+
+            <div style={{
+              fontSize: 11.5,
+              color: 'var(--ink-3)',
+              marginTop: 4,
+              borderTop: '1px dashed var(--line)',
+              paddingTop: 3,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'baseline',
+            }}>
+              <span>Fisik laci:</span>
+              <b style={{ fontSize: 12.5, color: 'var(--green, #1F8A5B)', fontVariantNumeric: 'tabular-nums' }}>
+                {rp(cashSummary?.expected_cash ?? 0)}
+              </b>
+            </div>
+          </div>
         </div>
         <table className="tx-table">
           <thead><tr><th>Jam</th><th>No. struk</th><th>Pelanggan &amp; layanan</th><th>Bayar</th><th className="num">Total</th></tr></thead>
@@ -208,7 +347,7 @@ export default function TransaksiView({ refreshKey, therapists, items }: { refre
       <EditSheet tx={editing} therapists={therapists} items={items} onClose={() => setEditing(null)}
         onSaved={(t) => { setAll((cur) => (cur ?? []).map((x) => (x.id === t.id ? t : x))); setSel(t); toast('Transaksi diperbarui'); }} />
       <BukuKasSheet open={bukuKasOpen} onClose={() => setBukuKasOpen(false)} role="owner"
-        initialDay={range === 'today' ? dayKey(today) : (from || dayKey(today))} />
+        initialDay={activeCashDay} onSaved={() => setCashKey((k) => k + 1)} />
     </section>
   );
 }

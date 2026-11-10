@@ -173,8 +173,8 @@ export default function BukuKasSheet({ open, onClose, role, initialDay, onSaved 
   }
 
   return (
-    <Sheet open={open} onClose={onClose} labelledBy="bukuKasTitle">
-      <div className="sheet-in" style={{ maxWidth: 560 }}>
+    <Sheet open={open} onClose={onClose} labelledBy="bukuKasTitle" className="sheet-buku-kas">
+      <div className="sheet-in">
         <CloseBtn onClick={onClose} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', paddingRight: 32 }}>
           <h3 id="bukuKasTitle" style={{ margin: 0 }}>Buku Kas & Rekonsiliasi</h3>
@@ -182,8 +182,8 @@ export default function BukuKasSheet({ open, onClose, role, initialDay, onSaved 
         </div>
 
         {/* Pemilihan Tanggal */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 16, marginBottom: 16 }}>
-          <input className="input" type="date" value={day} onChange={(e) => setDay(e.target.value)} style={{ width: 'auto' }} />
+        <div className="buku-date-bar" style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14, marginBottom: 14, flexWrap: 'wrap' }}>
+          <input className="input" type="date" value={day} onChange={(e) => setDay(e.target.value)} style={{ width: 'auto', minWidth: 130, flex: '1 1 auto' }} />
           {day !== todayStr && <button type="button" className="btn btn-line btn-sm" onClick={() => setDay(todayStr)}>Hari ini</button>}
           <button type="button" className="btn btn-line btn-sm" onClick={() => {
             const d = new Date(`${day}T00:00:00`);
@@ -296,7 +296,7 @@ export default function BukuKasSheet({ open, onClose, role, initialDay, onSaved 
                 <span>Pemisahan Arus Kas (Salon vs Gbee)</span>
                 <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>Penjualan Hari Ini</span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div className="buku-split-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 {/* Pos Salon */}
                 <div style={{ background: 'var(--paper-2, #F8F9FA)', padding: 10, borderRadius: 8 }}>
                   <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--ink)', marginBottom: 4 }}>💇 Salon</div>
@@ -333,7 +333,7 @@ export default function BukuKasSheet({ open, onClose, role, initialDay, onSaved 
                 </div>
 
                 {actual !== null && (
-                  <div style={{
+                  <div className="buku-diff-box" style={{
                     padding: 10, borderRadius: 8, fontSize: 13.5, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     background: diff === 0 ? '#E6F4EA' : diff! > 0 ? '#E8F0FE' : '#FCE8E6',
                     color: diff === 0 ? '#137333' : diff! > 0 ? '#1967D2' : '#C5221F',
@@ -354,12 +354,12 @@ export default function BukuKasSheet({ open, onClose, role, initialDay, onSaved 
             </div>
 
             {/* Tombol Aksi */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 8 }}>
-              <button type="button" className="btn btn-line" onClick={copyWhatsApp}>
-                📋 Salin Rekap WA
-              </button>
-              <button type="button" className="btn btn-green" onClick={() => handleCloseShift(!s.is_closed)} disabled={busy}>
+            <div className="buku-actions-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 8 }}>
+              <button type="button" className="btn btn-green" onClick={() => handleCloseShift(!s.is_closed)} disabled={busy} style={{ order: 1 }}>
                 {busy ? 'Menyimpan…' : s.is_closed ? 'Perbarui Buku Kas' : 'Tutup Kasir Hari Ini'}
+              </button>
+              <button type="button" className="btn btn-line" onClick={copyWhatsApp} style={{ order: 2 }}>
+                📋 Salin Rekap WA
               </button>
             </div>
 
