@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 import type {
-  CartLine, Category, Expense, Item, PayMethod, Photo, Profile, StaffMember, Therapist, Tx, TxLine,
+  BusinessUnit, CartLine, Category, DailyCashSummary, Expense, Item, PayMethod, Photo, Profile, StaffMember, Therapist, Tx, TxLine,
 } from './types';
 
 function db() {
@@ -24,16 +24,19 @@ interface ItemRow {
   id: string; category_id: string; name: string; note: string | null; is_service: boolean;
   price: number | null; web_price: number | null; variant_label: string | null; variants: [string, number][] | null;
   options: string[] | null; active: boolean; sort: number; description: string | null;
+  business_unit?: 'salon' | 'gbee' | null;
 }
 
 const fromRow = (r: ItemRow): Item => ({
   id: r.id, cat: r.category_id, name: r.name, k: r.note ?? undefined, service: r.is_service,
+  unit: (r.business_unit as BusinessUnit) ?? (r.category_id === 'produk' || r.id === 'facial-gbee' ? 'gbee' : 'salon'),
   price: r.price ?? undefined, webPrice: r.web_price ?? undefined, vlabel: r.variant_label ?? undefined, variants: r.variants ?? undefined,
   opts: r.options ?? undefined, off: !r.active, sort: r.sort, desc: r.description ?? undefined,
 });
 
 const toRow = (it: Item): ItemRow => ({
   id: it.id, category_id: it.cat, name: it.name, note: it.k ?? null, is_service: it.service,
+  business_unit: it.unit ?? (it.cat === 'produk' || it.id === 'facial-gbee' ? 'gbee' : 'salon'),
   price: it.price ?? null, web_price: it.webPrice ?? null, variant_label: it.vlabel ?? null, variants: it.variants ?? null,
   options: it.opts ?? null, active: !it.off, sort: it.sort, description: it.desc ?? null,
 });
@@ -103,12 +106,13 @@ interface TxRow {
   profiles: { name: string } | null;
   transaction_items: {
     id: number; catalog_item_id: string | null; category_id: string | null; name: string; price: number; qty: number;
+    business_unit?: 'salon' | 'gbee' | null;
     therapist_id: number | null; therapists: { name: string } | null;
   }[];
 }
 
 const SELECT_TX =
-  '*, profiles:cashier_id(name), transaction_items(id,catalog_item_id,category_id,name,price,qty,therapist_id,therapists:therapist_id(name))';
+  '*, profiles:cashier_id(name), transaction_items(id,catalog_item_id,category_id,name,price,qty,business_unit,therapist_id,therapists:therapist_id(name))';
 
 const txFromRow = (r: TxRow): Tx => ({
   id: r.id, no: r.no, at: new Date(r.created_at).getTime(), cust: r.customer ?? '', wa: r.customer_wa ?? '',
@@ -116,6 +120,7 @@ const txFromRow = (r: TxRow): Tx => ({
   kasir: r.profiles?.name ?? '-',
   lines: r.transaction_items.map((l): TxLine => ({
     id: l.catalog_item_id, cat: l.category_id, name: l.name, price: l.price, qty: l.qty,
+    unit: (l.business_unit as BusinessUnit) ?? (l.category_id === 'produk' || l.catalog_item_id === 'facial-gbee' ? 'gbee' : 'salon'),
     terapis: l.therapists?.name ?? null, rowId: l.id, terapisId: l.therapist_id,
   })),
 });
@@ -125,13 +130,15 @@ export async function updateTransaction(
   id: number,
   p: {
     customer: string; wa: string; discount: number; pay: PayMethod;
-    lines: { catalogId: string | null; cat: string | null; name: string; price: number; qty: number; terapisId: number | null }[];
+    lines: { catalogId: string | null; cat: string | null; name: string; price: number; qty: number; unit?: BusinessUnit; terapisId: number | null }[];
   },
 ): Promise<Tx> {
   const { error } = await db().rpc('update_transaction', {
     p_id: id, p_customer: p.customer, p_customer_wa: p.wa, p_discount: p.discount, p_pay: p.pay,
     p_items: p.lines.map((l) => ({
-      catalog_item_id: l.catalogId, category_id: l.cat, name: l.name, price: l.price, qty: l.qty, therapist_id: l.terapisId,
+      catalog_item_id: l.catalogId, category_id: l.cat, name: l.name, price: l.price, qty: l.qty,
+      business_unit: l.unit ?? (l.cat === 'produk' || l.catalogId === 'facial-gbee' ? 'gbee' : 'salon'),
+      therapist_id: l.terapisId,
     })),
   });
   fail(error);
@@ -181,6 +188,7 @@ export async function createTransaction(p: PayInput): Promise<Tx> {
     p_created_at: p.createdAt ? new Date(p.createdAt).toISOString() : null,
     p_items: p.lines.map((l) => ({
       catalog_item_id: l.id, category_id: l.cat, name: l.name, price: l.price, qty: l.qty,
+      business_unit: l.unit ?? (l.cat === 'produk' || l.id === 'facial-gbee' ? 'gbee' : 'salon'),
       therapist_id: l.terapis ? Number(l.terapis) : null,
     })),
   });
@@ -198,30 +206,36 @@ export async function loadExpenses(sinceMs: number): Promise<Expense[]> {
   const out: Expense[] = [];
   for (let from = 0; ; from += PAGE) {
     const { data, error } = await db()
-      .from('expenses').select('id,category,amount,note,created_at')
+      .from('expenses').select('id,category,amount,note,created_at,pay_method,business_unit')
       .gte('created_at', new Date(sinceMs).toISOString())
       .order('created_at', { ascending: false })
       .range(from, from + PAGE - 1);
     fail(error);
-    const rows = data as { id: number; category: string; amount: number; note: string | null; created_at: string }[];
+    const rows = data as {
+      id: number; category: string; amount: number; note: string | null; created_at: string;
+      pay_method?: 'Tunai' | 'Transfer' | null; business_unit?: 'salon' | 'gbee' | 'operasional' | null;
+    }[];
     out.push(...rows.map((x) => ({
       id: x.id, at: new Date(x.created_at).getTime(), cat: x.category, amt: x.amount, note: x.note ?? '',
+      pay: x.pay_method ?? 'Tunai', unit: x.business_unit ?? 'operasional',
     })));
     if (rows.length < PAGE) break;
   }
   return out;
 }
 
-export async function addExpense(e: { cat: string; amt: number; note: string; at: number }) {
+export async function addExpense(e: { cat: string; amt: number; note: string; at: number; pay?: 'Tunai' | 'Transfer'; unit?: 'salon' | 'gbee' | 'operasional' }) {
   const { error } = await db().from('expenses').insert({
     category: e.cat, amount: e.amt, note: e.note || null, created_at: new Date(e.at).toISOString(),
+    pay_method: e.pay ?? 'Tunai', business_unit: e.unit ?? 'operasional',
   });
   fail(error);
 }
 
-export async function updateExpense(id: number, e: { cat: string; amt: number; note: string; at: number }) {
+export async function updateExpense(id: number, e: { cat: string; amt: number; note: string; at: number; pay?: 'Tunai' | 'Transfer'; unit?: 'salon' | 'gbee' | 'operasional' }) {
   const { error } = await db().from('expenses').update({
     category: e.cat, amount: e.amt, note: e.note || null, created_at: new Date(e.at).toISOString(),
+    pay_method: e.pay ?? 'Tunai', business_unit: e.unit ?? 'operasional',
   }).eq('id', id);
   fail(error);
 }
@@ -229,6 +243,33 @@ export async function updateExpense(id: number, e: { cat: string; amt: number; n
 export async function deleteExpense(id: number) {
   const { error } = await db().from('expenses').delete().eq('id', id);
   fail(error);
+}
+
+/* ---------- buku kas kasir ---------- */
+export async function getDailyCashSummary(day?: string): Promise<DailyCashSummary> {
+  const { data, error } = await db().rpc('get_daily_cash_summary', { p_day: day ?? null });
+  fail(error);
+  return data as DailyCashSummary;
+}
+
+export async function saveDailyCashBook(p: {
+  day: string;
+  openingCash: number;
+  cashWithdrawn?: number;
+  closingCashActual?: number | null;
+  notes?: string;
+  isClosed?: boolean;
+}): Promise<DailyCashSummary> {
+  const { data, error } = await db().rpc('save_daily_cash_book', {
+    p_day: p.day,
+    p_opening_cash: p.openingCash,
+    p_cash_withdrawn: p.cashWithdrawn ?? 0,
+    p_closing_cash_actual: p.closingCashActual ?? null,
+    p_notes: p.notes ?? null,
+    p_is_closed: p.isClosed ?? false,
+  });
+  fail(error);
+  return data as DailyCashSummary;
 }
 
 /* ---------- karyawan (hanya owner; ditegakkan RPC + RLS) ---------- */

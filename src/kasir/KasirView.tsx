@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { createTransaction } from './api';
+import BukuKasSheet from './BukuKasSheet';
 import { enqueue, isNetworkError } from './offline';
 import { money, num, rp, rpk } from './format';
 import type { CartLine, Category, Item, PayMethod, Profile, Therapist, Tx } from './types';
@@ -38,6 +39,7 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
   const [opt, setOpt] = useState('');
   const [receipt, setReceipt] = useState<Tx | null>(null);
   const [paying, setPaying] = useState(false);
+  const [bukuKasOpen, setBukuKasOpen] = useState(false);
 
   const q = query.trim().toLowerCase();
   const list = useMemo(
@@ -54,6 +56,11 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
     ? Math.round((sub * Math.min(num(disc), 100)) / 100)
     : Math.min(num(disc), sub);
   const total = sub - discount;
+  const subSalon = cart.filter((l) => (l.unit ?? (l.cat === 'produk' || l.id === 'facial-gbee' ? 'gbee' : 'salon')) === 'salon').reduce((a, l) => a + l.price * l.qty, 0);
+  const subGbee = sub - subSalon;
+  const discSalon = sub ? Math.round((discount * subSalon) / sub) : 0;
+  const totSalon = Math.max(0, subSalon - discSalon);
+  const totGbee = Math.max(0, subGbee - (discount - discSalon));
   const count = cart.reduce((a, l) => a + l.qty, 0);
   const cash = num(cashIn);
   const change = cash - total;
@@ -69,10 +76,11 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
 
   function addLine(it: Item, name: string, price: number) {
     const key = it.id + '|' + name;
+    const unit = it.unit ?? (it.cat === 'produk' || it.id === 'facial-gbee' ? 'gbee' : 'salon');
     setCart((c) => {
       const ex = c.find((l) => l.key === key);
       if (ex && !it.service) return c.map((l) => (l === ex ? { ...l, qty: l.qty + 1 } : l));
-      return [...c, { key, id: it.id, cat: it.cat, name, price, qty: 1, terapis: '', service: it.service }];
+      return [...c, { key, id: it.id, cat: it.cat, name, price, qty: 1, unit, terapis: '', service: it.service }];
     });
     toast(`${name} ditambahkan`);
   }
@@ -143,11 +151,17 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
       <div className="pos">
         <div className="catalog">
           <div className="cat-tools">
-            <label className="search">
-              {Icon.search()}
-              <input className="input" type="search" placeholder="Cari layanan atau produk…" autoComplete="off"
-                aria-label="Cari layanan atau produk" value={query} onChange={(e) => setQuery(e.target.value)} />
-            </label>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', width: '100%' }}>
+              <label className="search" style={{ flex: 1 }}>
+                {Icon.search()}
+                <input className="input" type="search" placeholder="Cari layanan atau produk…" autoComplete="off"
+                  aria-label="Cari layanan atau produk" value={query} onChange={(e) => setQuery(e.target.value)} />
+              </label>
+              <button type="button" className="btn btn-line btn-sm" style={{ whiteSpace: 'nowrap', height: 42, padding: '0 12px' }}
+                onClick={() => setBukuKasOpen(true)}>
+                📖 Buku Kas
+              </button>
+            </div>
             <div className="tabs" role="group" aria-label="Kategori">
               <button className="tab" aria-pressed={cat === 'all'} onClick={() => setCat('all')}>Semua</button>
               {cats.map((c) => (
@@ -229,6 +243,12 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
               <div className="rowx disc-note"><span>Potongan {num(disc)}%</span><b>-{rp(discount)}</b></div>
             )}
             <div className="rowx total"><span>Total</span><b>{rp(total)}</b></div>
+            {subSalon > 0 && subGbee > 0 && (
+              <div className="rowx" style={{ fontSize: 12.5, color: 'var(--ink-3)', margin: '-6px 0 2px' }}>
+                <span>Porsi</span>
+                <span>Salon: {rp(totSalon)} · Gbee: {rp(totGbee)}</span>
+              </div>
+            )}
             <div className="pay" role="radiogroup" aria-label="Metode bayar">
               {(['Tunai', 'QRIS', 'Transfer'] as PayMethod[]).map((m) => (
                 <label key={m}><input type="radio" name="pay" value={m} checked={pay === m} onChange={() => setPay(m)} /><span>{m}</span></label>
@@ -295,6 +315,8 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
       </Sheet>
 
       <ReceiptSheet tx={receipt} fresh onClose={() => setReceipt(null)} />
+
+      <BukuKasSheet open={bukuKasOpen} onClose={() => setBukuKasOpen(false)} role={profile.role} onSaved={onPaid} />
     </section>
   );
 }

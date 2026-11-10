@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { deleteTransaction, loadTransactions, updateTransaction } from './api';
+import BukuKasSheet from './BukuKasSheet';
 import DateRange, { defaultRange } from './DateRange';
 import { dayKey, fmtDay, fmtTime, money, num, rp, startOfDay } from './format';
 import type { Item, PayMethod, Therapist, Tx } from './types';
@@ -8,6 +9,17 @@ import { CloseBtn, ReceiptSheet, Select, Sheet, useConfirm, useToast } from './u
 type Sort = 'new' | 'old' | 'big' | 'small';
 const csvCell = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
 type Range = 'today' | 'yesterday' | '7' | '30' | 'month' | 'lastmonth' | 'custom';
+
+export function calcPortion(t: Tx) {
+  const subSalon = t.lines
+    .filter((l) => (l.unit ?? (l.cat === 'produk' || l.id === 'facial-gbee' ? 'gbee' : 'salon')) === 'salon')
+    .reduce((a, l) => a + l.price * l.qty, 0);
+  const subGbee = t.sub - subSalon;
+  const discSalon = t.sub ? Math.round((t.disc * subSalon) / t.sub) : 0;
+  const salon = Math.max(0, subSalon - discSalon);
+  const gbee = Math.max(0, subGbee - (t.disc - discSalon));
+  return { salon, gbee };
+}
 
 export default function TransaksiView({ refreshKey, therapists, items }: { refreshKey: number; therapists: Therapist[]; items: Item[] }) {
   const toast = useToast();
@@ -23,6 +35,8 @@ export default function TransaksiView({ refreshKey, therapists, items }: { refre
   const [all, setAll] = useState<Tx[] | null>(null);
   const [sel, setSel] = useState<Tx | null>(null);
   const [editing, setEditing] = useState<Tx | null>(null);
+  const [bukuKasOpen, setBukuKasOpen] = useState(false);
+  const [unitF, setUnitF] = useState<'all' | 'salon' | 'gbee'>('all');
 
   async function remove(t: Tx) {
     if (!(await confirm({
@@ -69,13 +83,16 @@ export default function TransaksiView({ refreshKey, therapists, items }: { refre
     const by: Record<Sort, (a: Tx, b: Tx) => number> = {
       new: (a, b) => b.at - a.at, old: (a, b) => a.at - b.at, big: (a, b) => b.total - a.total, small: (a, b) => a.total - b.total,
     };
-    return (all ?? []).filter((t) =>
-      t.at >= start.getTime() && t.at < end.getTime() && t.total >= min &&
-      (!pay || t.pay === pay) && (!staffF || t.lines.some((l) => l.terapis === staffF)) &&
-      (!needle || `${t.no} ${t.cust} ${t.wa} ${t.lines.map((l) => l.name).join(' ')}`.toLowerCase().includes(needle)),
-    ).sort(by[sort]);
+    return (all ?? []).filter((t) => {
+      const p = calcPortion(t);
+      if (unitF === 'salon' && p.salon <= 0) return false;
+      if (unitF === 'gbee' && p.gbee <= 0) return false;
+      return t.at >= start.getTime() && t.at < end.getTime() && t.total >= min &&
+        (!pay || t.pay === pay) && (!staffF || t.lines.some((l) => l.terapis === staffF)) &&
+        (!needle || `${t.no} ${t.cust} ${t.wa} ${t.lines.map((l) => l.name).join(' ')}`.toLowerCase().includes(needle));
+    }).sort(by[sort]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [all, range, from, to, q, pay, staffF, minAmt, sort]);
+  }, [all, range, from, to, q, pay, staffF, minAmt, sort, unitF]);
 
   // karyawan = terapis (yang mengerjakan layanan sekaligus dicatat sebagai kasir). Daftar dari menu Terapis,
   // ditambah terapis nonaktif yang masih tercatat di transaksi lama.
@@ -85,10 +102,14 @@ export default function TransaksiView({ refreshKey, therapists, items }: { refre
   const dateSorted = sort === 'new' || sort === 'old';
 
   function exportCsv() {
-    const rows = [['Tanggal', 'Jam', 'No. struk', 'Pelanggan', 'Layanan', 'Bayar', 'Kasir', 'Diskon', 'Total'].map(csvCell).join(',')];
-    list.slice().sort((a, b) => a.at - b.at).forEach((t) => rows.push([
-      dayKey(t.at), fmtTime(t.at), t.no, t.cust, t.lines.map((l) => l.name + (l.qty > 1 ? ' x' + l.qty : '')).join('; '), t.pay, t.kasir, t.disc, t.total,
-    ].map(csvCell).join(',')));
+    const rows = [['Tanggal', 'Jam', 'No. struk', 'Pelanggan', 'Layanan', 'Bayar', 'Kasir', 'Porsi Salon', 'Porsi Gbee', 'Diskon', 'Total'].map(csvCell).join(',')];
+    list.slice().sort((a, b) => a.at - b.at).forEach((t) => {
+      const p = calcPortion(t);
+      rows.push([
+        dayKey(t.at), fmtTime(t.at), t.no, t.cust, t.lines.map((l) => l.name + (l.qty > 1 ? ' x' + l.qty : '')).join('; '),
+        t.pay, t.kasir, p.salon, p.gbee, t.disc, t.total,
+      ].map(csvCell).join(','));
+    });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([String.fromCharCode(0xfeff) + rows.join(String.fromCharCode(13, 10))], { type: 'text/csv;charset=utf-8' }));
     a.download = `transaksi-${dayKey(new Date())}.csv`;
@@ -97,6 +118,8 @@ export default function TransaksiView({ refreshKey, therapists, items }: { refre
   }
 
   const sum = list.reduce((a, t) => a + t.total, 0);
+  const sumSalon = list.reduce((a, t) => a + calcPortion(t).salon, 0);
+  const sumGbee = list.reduce((a, t) => a + calcPortion(t).gbee, 0);
   const multi = range !== 'today' && range !== 'yesterday';
   const short = { day: 'numeric', month: 'short' } as const;
   let meta: string;
@@ -136,13 +159,18 @@ export default function TransaksiView({ refreshKey, therapists, items }: { refre
             options={[{ value: '', label: 'Semua karyawan' }, ...staffOpts.map((k) => ({ value: k, label: k }))]} />
           <input className="input" inputMode="numeric" placeholder="Minimal Rp" aria-label="Nominal minimal" value={minAmt}
             onChange={(e) => { const n = Number(e.target.value.replace(/\D/g, '')); setMinAmt(n ? n.toLocaleString('id-ID') : ''); }} />
+          <Select className="input" ariaLabel="Unit bisnis" value={unitF} onChange={(v) => setUnitF(v as 'all' | 'salon' | 'gbee')}
+            options={[{ value: 'all', label: 'Semua unit' }, { value: 'salon', label: 'Khusus Salon' }, { value: 'gbee', label: 'Khusus Gbee' }]} />
           <Select className="input" ariaLabel="Urutan" value={sort} onChange={(v) => setSort(v as Sort)}
             options={[{ value: 'new', label: 'Terbaru' }, { value: 'old', label: 'Terlama' }, { value: 'big', label: 'Total terbesar' }, { value: 'small', label: 'Total terkecil' }]} />
-          {filtered && <button className="linkbtn" type="button" onClick={() => { setQ(''); setPay(''); setStaffF(''); setMinAmt(''); }}>Reset</button>}
+          {filtered && <button className="linkbtn" type="button" onClick={() => { setQ(''); setPay(''); setStaffF(''); setMinAmt(''); setUnitF('all'); }}>Reset</button>}
+          <button className="btn btn-line btn-sm" type="button" onClick={() => setBukuKasOpen(true)}>📖 Buku Kas Laci</button>
           <button className="btn btn-line btn-sm" type="button" onClick={exportCsv} disabled={!list.length}>Unduh CSV</button>
         </div>
         <div className="sumrow">
-          <div><span>Pemasukan</span><b>{rp(sum)}</b></div>
+          <div><span>Total Pemasukan</span><b>{rp(sum)}</b></div>
+          <div><span>💇 Porsi Salon</span><b style={{ color: 'var(--ink)' }}>{rp(sumSalon)}</b></div>
+          <div><span>✨ Porsi Gbee</span><b style={{ color: '#E65100' }}>{rp(sumGbee)}</b></div>
           <div><span>Transaksi</span><b>{list.length}</b></div>
           <div><span>Rata-rata</span><b>{rp(list.length ? sum / list.length : 0)}</b></div>
         </div>
@@ -179,6 +207,8 @@ export default function TransaksiView({ refreshKey, therapists, items }: { refre
         onEdit={(t) => { setSel(null); setEditing(t); }} onDelete={remove} />
       <EditSheet tx={editing} therapists={therapists} items={items} onClose={() => setEditing(null)}
         onSaved={(t) => { setAll((cur) => (cur ?? []).map((x) => (x.id === t.id ? t : x))); setSel(t); toast('Transaksi diperbarui'); }} />
+      <BukuKasSheet open={bukuKasOpen} onClose={() => setBukuKasOpen(false)} role="owner"
+        initialDay={range === 'today' ? dayKey(today) : (from || dayKey(today))} />
     </section>
   );
 }

@@ -18,13 +18,28 @@ export default function ExpenseSheet({ open, editing, knownCats, onClose, onSave
   const [amt, setAmt] = useState('');
   const [date, setDate] = useState('');
   const [note, setNote] = useState('');
+  const [pay, setPay] = useState<'Tunai' | 'Transfer'>('Tunai');
+  const [unit, setUnit] = useState<'salon' | 'gbee' | 'operasional'>('operasional');
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setNewCat('');
-    if (editing) { setDate(dayKey(editing.at)); setAmt(String(editing.amt)); setNote(editing.note); setCat(editing.cat); }
-    else { setDate(dayKey(new Date())); setAmt(''); setNote(''); setCat(EXP_CATS[0]); }
+    if (editing) {
+      setDate(dayKey(editing.at));
+      setAmt(String(editing.amt));
+      setNote(editing.note);
+      setCat(editing.cat);
+      setPay(editing.pay ?? 'Tunai');
+      setUnit(editing.unit ?? 'operasional');
+    } else {
+      setDate(dayKey(new Date()));
+      setAmt('');
+      setNote('');
+      setCat(EXP_CATS[0]);
+      setPay('Tunai');
+      setUnit('operasional');
+    }
   }, [open, editing]);
 
   const cats = expenseCats([...knownCats, ...(editing ? [editing.cat] : [])]);
@@ -40,7 +55,7 @@ export default function ExpenseSheet({ open, editing, knownCats, onClose, onSave
     const at = editing && date === dayKey(editing.at) ? editing.at : new Date(Y, M - 1, D, 12).getTime();
     setBusy(true);
     try {
-      const body = { cat: catFinal, amt: a, note: note.trim(), at };
+      const body = { cat: catFinal, amt: a, note: note.trim(), at, pay, unit };
       if (editing) await updateExpense(editing.id, body); else await addExpense(body);
       onClose(); onSaved(editing ? 'Pengeluaran diperbarui' : 'Pengeluaran tersimpan');
     } catch (err) {
@@ -83,6 +98,23 @@ export default function ExpenseSheet({ open, editing, knownCats, onClose, onSave
             <input className="input" id="expAmt" inputMode="numeric" placeholder="Rp0" value={amt ? 'Rp' + money(num(amt)) : ''} onChange={(e) => setAmt(e.target.value)} autoFocus /></div>
           <div><label htmlFor="expDate">Tanggal</label>
             <input className="input" id="expDate" type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
+        </div>
+        <div className="field row2">
+          <div>
+            <span className="label">Sumber dana</span>
+            <div className="seg seg-sm" role="radiogroup" aria-label="Sumber dana">
+              <button type="button" aria-pressed={pay === 'Tunai'} onClick={() => setPay('Tunai')}>Tunai kasir</button>
+              <button type="button" aria-pressed={pay === 'Transfer'} onClick={() => setPay('Transfer')}>Transfer bank</button>
+            </div>
+          </div>
+          <div>
+            <span className="label">Alokasi pos</span>
+            <div className="seg seg-sm" role="radiogroup" aria-label="Alokasi pos">
+              <button type="button" aria-pressed={unit === 'salon'} onClick={() => setUnit('salon')}>Salon</button>
+              <button type="button" aria-pressed={unit === 'gbee'} onClick={() => setUnit('gbee')}>Gbee</button>
+              <button type="button" aria-pressed={unit === 'operasional'} onClick={() => setUnit('operasional')}>Umum</button>
+            </div>
+          </div>
         </div>
         <div className="field"><label htmlFor="expNote">Keterangan <span className="opt">(wajib)</span></label>
           <input className="input" id="expNote" placeholder="Misal: beli cat rambut 6 tube" value={note} onChange={(e) => setNote(e.target.value)} /></div>

@@ -133,7 +133,19 @@ export default function PengeluaranView({ refreshKey }: { refreshKey: number }) 
               <tr key={x.id} className="tx-row" tabIndex={0} onClick={() => openSheet(x)}
                 onKeyDown={(e) => { if (e.key === 'Enter') openSheet(x); }}>
                 <td className="c-time">{fmtDay(x.at, { day: 'numeric', month: 'short', year: 'numeric' })}</td>
-                <td><span className="pill">{x.cat}</span></td>
+                <td>
+                  <span className="pill">{x.cat}</span>
+                  {x.unit && x.unit !== 'operasional' && (
+                    <span style={{ marginLeft: 6, fontSize: 11, background: x.unit === 'gbee' ? '#FFF3E0' : '#E8F5E9', color: x.unit === 'gbee' ? '#E65100' : '#1B5E20', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>
+                      {x.unit === 'gbee' ? 'Gbee' : 'Salon'}
+                    </span>
+                  )}
+                  {x.pay === 'Transfer' && (
+                    <span style={{ marginLeft: 6, fontSize: 11, background: '#F1F3F4', color: '#5F6368', padding: '1px 6px', borderRadius: 4 }}>
+                      Trf
+                    </span>
+                  )}
+                </td>
                 <td>{x.note || <span className="muted">-</span>}</td>
                 <td className="c-total num"><b>{rp(x.amt)}</b></td>
               </tr>

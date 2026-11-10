@@ -4,6 +4,7 @@ import DateRange, { defaultRange } from './DateRange';
 import DayChart, { type DayPoint } from './DayChart';
 import { dayKey, fmtDay, rp, rpk, startOfDay } from './format';
 import ExpenseSheet, { expenseCats } from './ExpenseSheet';
+import { calcPortion } from './TransaksiView';
 import type { Category, Expense, Tx } from './types';
 import { useToast } from './ui';
 
@@ -14,6 +15,7 @@ const PAYC: Record<string, string> = { Tunai: '#1F8A5B', QRIS: '#6A63C9', Transf
 export default function KeuanganView({ cats, refreshKey, onOpenPengeluaran }: { cats: Category[]; refreshKey: number; onOpenPengeluaran: () => void }) {
   const toast = useToast();
   const [range, setRange] = useState<Range>('30');
+  const [unitFilter, setUnitFilter] = useState<'all' | 'salon' | 'gbee'>('all');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [txs, setTxs] = useState<Tx[] | null>(null);
@@ -57,24 +59,36 @@ export default function KeuanganView({ cats, refreshKey, onOpenPengeluaran }: { 
     }
     const start = days[0].getTime(), end = days[days.length - 1].getTime() + 864e5, prevStart = start - (end - start);
     const all = txs ?? [];
-    const tx = all.filter((t) => t.at >= start && t.at < end), ex = exps.filter((x) => x.at >= start && x.at < end);
-    const ptx = all.filter((t) => t.at >= prevStart && t.at < start), pex = exps.filter((x) => x.at >= prevStart && x.at < start);
-    const inc = tx.reduce((a, t) => a + t.total, 0), out = ex.reduce((a, x) => a + x.amt, 0);
-    const pin = ptx.reduce((a, t) => a + t.total, 0), pout = pex.reduce((a, x) => a + x.amt, 0);
+    const txIncome = (t: Tx) => (unitFilter === 'all' ? t.total : calcPortion(t)[unitFilter]);
+    const expMatch = (x: Expense) => (unitFilter === 'all' ? true : x.unit === unitFilter);
+
+    const tx = all.filter((t) => t.at >= start && t.at < end && (unitFilter === 'all' || calcPortion(t)[unitFilter] > 0));
+    const ex = exps.filter((x) => x.at >= start && x.at < end && expMatch(x));
+    const ptx = all.filter((t) => t.at >= prevStart && t.at < start && (unitFilter === 'all' || calcPortion(t)[unitFilter] > 0));
+    const pex = exps.filter((x) => x.at >= prevStart && x.at < start && expMatch(x));
+    const inc = tx.reduce((a, t) => a + txIncome(t), 0), out = ex.reduce((a, x) => a + x.amt, 0);
+    const pin = ptx.reduce((a, t) => a + txIncome(t), 0), pout = pex.reduce((a, x) => a + x.amt, 0);
+
+    const incSalon = all.filter((t) => t.at >= start && t.at < end).reduce((a, t) => a + calcPortion(t).salon, 0);
+    const incGbee = all.filter((t) => t.at >= start && t.at < end).reduce((a, t) => a + calcPortion(t).gbee, 0);
+
     const series: DayPoint[] = days.map((day) => {
       const k = dayKey(day);
       const dt = tx.filter((t) => dayKey(t.at) === k);
-      return { d: day, inc: dt.reduce((a, t) => a + t.total, 0), n: dt.length, out: ex.filter((x) => dayKey(x.at) === k).reduce((a, x) => a + x.amt, 0) };
+      return { d: day, inc: dt.reduce((a, t) => a + txIncome(t), 0), n: dt.length, out: ex.filter((x) => dayKey(x.at) === k).reduce((a, x) => a + x.amt, 0) };
     });
-    return { start, last: days[days.length - 1], tx, ex, inc, out, pin, pout, series };
+    return { start, last: days[days.length - 1], tx, ex, inc, out, pin, pout, series, incSalon, incGbee };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [txs, exps, range, from, to]);
+  }, [txs, exps, range, from, to, unitFilter]);
 
-  const { tx, ex, inc, out, pin, pout, series } = d;
+  const { tx, ex, inc, out, pin, pout, series, incSalon, incGbee } = d;
   const delta = (a: number, b: number) => (b ? `${a >= b ? '▲' : '▼'} ${Math.abs(Math.round(((a - b) / b) * 100))}% vs periode lalu` : '');
   const tone = (a: number, b: number, upIsGood: boolean) => (b && a !== b ? ((a > b) === upIsGood ? ' up' : ' down') : '');
 
-  const lines = tx.flatMap((t) => t.lines);
+  const lines = tx.flatMap((t) => t.lines.filter((l) => {
+    const u = l.unit ?? (l.cat === 'produk' || l.id === 'facial-gbee' ? 'gbee' : 'salon');
+    return unitFilter === 'all' || u === unitFilter;
+  }));
   const byCat = cats.map((c) => ({ name: c.name, v: lines.filter((l) => l.cat === c.id).reduce((a, l) => a + l.price * l.qty, 0) })).sort((a, b) => b.v - a.v);
   const uncat = lines.filter((l) => !cats.some((c) => c.id === l.cat)).reduce((a, l) => a + l.price * l.qty, 0);
   if (uncat) byCat.push({ name: 'Tanpa kategori', v: uncat });
@@ -90,7 +104,10 @@ export default function KeuanganView({ cats, refreshKey, onOpenPengeluaran }: { 
   const expCats = expenseCats(ex.map((x) => x.cat));
   const byExp = expCats.map((c) => ({ name: c, v: ex.filter((x) => x.cat === c).reduce((a, x) => a + x.amt, 0) })).filter((c) => c.v).sort((a, b) => b.v - a.v);
   const emax = Math.max(1, ...byExp.map((c) => c.v));
-  const pays = (['Tunai', 'QRIS', 'Transfer'] as const).map((p) => ({ p, v: tx.filter((t) => t.pay === p).reduce((a, t) => a + t.total, 0) }));
+  const pays = (['Tunai', 'QRIS', 'Transfer'] as const).map((p) => ({
+    p,
+    v: tx.filter((t) => t.pay === p).reduce((a, t) => a + (unitFilter === 'all' ? t.total : calcPortion(t)[unitFilter]), 0),
+  }));
   const expSorted = ex.slice().sort((a, b) => b.at - a.at);
   const seg: [Range, string][] = [['7', '7 hari'], ['30', '30 hari'], ['month', 'Bulan ini'], ['lastmonth', 'Bulan lalu'], ['custom', 'Pilih tanggal']];
   const hoverNone = typeof matchMedia !== 'undefined' && matchMedia('(hover: none)').matches;
@@ -100,15 +117,28 @@ export default function KeuanganView({ cats, refreshKey, onOpenPengeluaran }: { 
       <div className="v-head">
         <div><h1>Keuangan</h1>
           <p className="meta">{fmtDay(d.start, { day: 'numeric', month: 'short' })} – {fmtDay(d.last, { day: 'numeric', month: 'short', year: 'numeric' })}</p></div>
-        <div className="seg">
-          {seg.map(([r, label]) => <button key={r} aria-pressed={range === r} onClick={() => { if (r === 'custom' && !from) { const [a, b] = defaultRange(); setFrom(a); setTo(b); } setRange(r); }}>{label}</button>)}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <div className="seg seg-sm">
+            <button type="button" aria-pressed={unitFilter === 'all'} onClick={() => setUnitFilter('all')}>Semua Unit</button>
+            <button type="button" aria-pressed={unitFilter === 'salon'} onClick={() => setUnitFilter('salon')}>Salon</button>
+            <button type="button" aria-pressed={unitFilter === 'gbee'} onClick={() => setUnitFilter('gbee')}>Gbee</button>
+          </div>
+          <div className="seg">
+            {seg.map(([r, label]) => <button key={r} aria-pressed={range === r} onClick={() => { if (r === 'custom' && !from) { const [a, b] = defaultRange(); setFrom(a); setTo(b); } setRange(r); }}>{label}</button>)}
+          </div>
         </div>
       </div>
       {range === 'custom' && <div className="pad" style={{ paddingBottom: 0 }}><DateRange from={from} to={to} onChange={(a, b) => { setFrom(a); setTo(b); }} /></div>}
       <div className="pad">
         <div className="kpis">
           <div className="kpi hero"><span>Laba bersih</span><b>{rp(inc - out)}</b><small>{inc ? `Margin ${Math.round(((inc - out) / inc) * 100)}%` : ''}</small></div>
-          <div className="kpi"><span><i className="sw" style={{ background: 'var(--c-in)' }} />Pemasukan</span><b>{rp(inc)}</b><small className={tone(inc, pin, true)}>{delta(inc, pin)}</small></div>
+          <div className="kpi">
+            <span><i className="sw" style={{ background: 'var(--c-in)' }} />Pemasukan</span>
+            <b>{rp(inc)}</b>
+            <small className={tone(inc, pin, true)}>
+              {unitFilter === 'all' ? `Salon: ${rpk(incSalon)} · Gbee: ${rpk(incGbee)}` : delta(inc, pin)}
+            </small>
+          </div>
           <div className="kpi"><span><i className="sw" style={{ background: 'var(--c-out)' }} />Pengeluaran</span><b>{rp(out)}</b><small className={tone(out, pout, false)}>{delta(out, pout)}</small></div>
           <div className="kpi"><span>Transaksi</span><b>{tx.length}</b><small>{tx.length ? `Rata-rata ${rp(inc / tx.length)}` : ''}</small></div>
         </div>

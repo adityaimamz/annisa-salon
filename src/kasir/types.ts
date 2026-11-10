@@ -1,6 +1,7 @@
 export type Role = 'owner' | 'kasir';
 export type PayMethod = 'Tunai' | 'QRIS' | 'Transfer';
 export type Variant = [string, number];
+export type BusinessUnit = 'salon' | 'gbee';
 
 export interface Profile {
   id: string;
@@ -28,6 +29,7 @@ export interface Item {
   name: string;
   k?: string;
   service: boolean;
+  unit?: BusinessUnit;
   price?: number; // harga kasir
   webPrice?: number; // harga produk di website (landing & /produk); kosong = ikut harga kasir. Layanan selalu memakai `price`.
   desc?: string; // deskripsi layanan di website
@@ -49,6 +51,7 @@ export interface TxLine {
   name: string;
   price: number;
   qty: number;
+  unit?: BusinessUnit;
   terapis: string | null;
   /** hanya terisi untuk transaksi yang dibaca dari server (dipakai saat edit) */
   rowId?: number;
@@ -76,6 +79,8 @@ export interface Expense {
   cat: string;
   amt: number;
   note: string;
+  pay?: 'Tunai' | 'Transfer';
+  unit?: 'salon' | 'gbee' | 'operasional';
 }
 
 export interface CartLine {
@@ -85,11 +90,46 @@ export interface CartLine {
   name: string;
   price: number;
   qty: number;
+  unit?: BusinessUnit;
   terapis: string; // id terapis sebagai string, '' = belum dipilih
   service: boolean;
 }
 
 export const EXP_CATS = ['Belanja bahan', 'Stok produk', 'Gaji', 'Listrik & air', 'Sewa', 'Lainnya'];
+
+export interface DailyCashSummary {
+  day: string; // YYYY-MM-DD
+  opening_cash: number; // M
+  cash_withdrawn: number;
+  closing_cash_actual: number | null;
+  notes: string | null;
+  is_closed: boolean;
+  closed_at: string | null;
+  closed_by_name: string | null;
+  total_sales: number;
+  cash_sales_salon: number;
+  cash_sales_gbee: number;
+  cash_sales_total: number;
+  qris_sales_salon: number;
+  qris_sales_gbee: number;
+  qris_sales_total: number;
+  transfer_sales_salon: number;
+  transfer_sales_gbee: number;
+  transfer_sales_total: number;
+  cash_expenses: number;
+  expected_cash: number;
+  difference: number | null;
+  tx_lines: {
+    id: number;
+    no: string;
+    cust: string | null;
+    pay: PayMethod;
+    total: number;
+    salon: number;
+    gbee: number;
+    time: string;
+  }[];
+}
 
 export interface Photo {
   id: string;
