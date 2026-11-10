@@ -191,3 +191,4 @@ on conflict (day) do update set
   is_closed = excluded.is_closed,
   notes = excluded.notes,
   updated_at = now();
+
