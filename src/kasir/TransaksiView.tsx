@@ -12,7 +12,7 @@ type Range = 'today' | 'yesterday' | '7' | '30' | 'month' | 'lastmonth' | 'custo
 
 export function calcPortion(t: Tx) {
   const subSalon = t.lines
-    .filter((l) => (l.unit ?? (l.cat === 'produk' || l.id === 'facial-gbee' ? 'gbee' : 'salon')) === 'salon')
+    .filter((l) => (l.unit ?? (l.cat === 'produk' ? 'gbee' : 'salon')) === 'salon')
     .reduce((a, l) => a + l.price * l.qty, 0);
   const subGbee = t.sub - subSalon;
   const discSalon = t.sub ? Math.round((t.disc * subSalon) / t.sub) : 0;

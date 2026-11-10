@@ -54,7 +54,7 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
     ? Math.round((sub * Math.min(num(disc), 100)) / 100)
     : Math.min(num(disc), sub);
   const total = sub - discount;
-  const subSalon = cart.filter((l) => (l.unit ?? (l.cat === 'produk' || l.id === 'facial-gbee' ? 'gbee' : 'salon')) === 'salon').reduce((a, l) => a + l.price * l.qty, 0);
+  const subSalon = cart.filter((l) => (l.unit ?? (l.cat === 'produk' ? 'gbee' : 'salon')) === 'salon').reduce((a, l) => a + l.price * l.qty, 0);
   const subGbee = sub - subSalon;
   const discSalon = sub ? Math.round((discount * subSalon) / sub) : 0;
   const totSalon = Math.max(0, subSalon - discSalon);
@@ -74,7 +74,7 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
 
   function addLine(it: Item, name: string, price: number) {
     const key = it.id + '|' + name;
-    const unit = it.unit ?? (it.cat === 'produk' || it.id === 'facial-gbee' ? 'gbee' : 'salon');
+    const unit = it.unit ?? (it.cat === 'produk' ? 'gbee' : 'salon');
     setCart((c) => {
       const ex = c.find((l) => l.key === key);
       if (ex && !it.service) return c.map((l) => (l === ex ? { ...l, qty: l.qty + 1 } : l));

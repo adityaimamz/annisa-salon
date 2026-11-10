@@ -29,14 +29,14 @@ interface ItemRow {
 
 const fromRow = (r: ItemRow): Item => ({
   id: r.id, cat: r.category_id, name: r.name, k: r.note ?? undefined, service: r.is_service,
-  unit: (r.business_unit as BusinessUnit) ?? (r.category_id === 'produk' || r.id === 'facial-gbee' ? 'gbee' : 'salon'),
+  unit: (r.business_unit as BusinessUnit) ?? (r.category_id === 'produk' ? 'gbee' : 'salon'),
   price: r.price ?? undefined, webPrice: r.web_price ?? undefined, vlabel: r.variant_label ?? undefined, variants: r.variants ?? undefined,
   opts: r.options ?? undefined, off: !r.active, sort: r.sort, desc: r.description ?? undefined,
 });
 
 const toRow = (it: Item): ItemRow => ({
   id: it.id, category_id: it.cat, name: it.name, note: it.k ?? null, is_service: it.service,
-  business_unit: it.unit ?? (it.cat === 'produk' || it.id === 'facial-gbee' ? 'gbee' : 'salon'),
+  business_unit: it.unit ?? (it.cat === 'produk' ? 'gbee' : 'salon'),
   price: it.price ?? null, web_price: it.webPrice ?? null, variant_label: it.vlabel ?? null, variants: it.variants ?? null,
   options: it.opts ?? null, active: !it.off, sort: it.sort, description: it.desc ?? null,
 });
@@ -120,7 +120,7 @@ const txFromRow = (r: TxRow): Tx => ({
   kasir: r.profiles?.name ?? '-',
   lines: r.transaction_items.map((l): TxLine => ({
     id: l.catalog_item_id, cat: l.category_id, name: l.name, price: l.price, qty: l.qty,
-    unit: (l.business_unit as BusinessUnit) ?? (l.category_id === 'produk' || l.catalog_item_id === 'facial-gbee' ? 'gbee' : 'salon'),
+    unit: (l.business_unit as BusinessUnit) ?? (l.category_id === 'produk' ? 'gbee' : 'salon'),
     terapis: l.therapists?.name ?? null, rowId: l.id, terapisId: l.therapist_id,
   })),
 });
@@ -137,7 +137,7 @@ export async function updateTransaction(
     p_id: id, p_customer: p.customer, p_customer_wa: p.wa, p_discount: p.discount, p_pay: p.pay,
     p_items: p.lines.map((l) => ({
       catalog_item_id: l.catalogId, category_id: l.cat, name: l.name, price: l.price, qty: l.qty,
-      business_unit: l.unit ?? (l.cat === 'produk' || l.catalogId === 'facial-gbee' ? 'gbee' : 'salon'),
+      business_unit: l.unit ?? (l.cat === 'produk' ? 'gbee' : 'salon'),
       therapist_id: l.terapisId,
     })),
   });
@@ -188,7 +188,7 @@ export async function createTransaction(p: PayInput): Promise<Tx> {
     p_created_at: p.createdAt ? new Date(p.createdAt).toISOString() : null,
     p_items: p.lines.map((l) => ({
       catalog_item_id: l.id, category_id: l.cat, name: l.name, price: l.price, qty: l.qty,
-      business_unit: l.unit ?? (l.cat === 'produk' || l.id === 'facial-gbee' ? 'gbee' : 'salon'),
+      business_unit: l.unit ?? (l.cat === 'produk' ? 'gbee' : 'salon'),
       therapist_id: l.terapis ? Number(l.terapis) : null,
     })),
   });

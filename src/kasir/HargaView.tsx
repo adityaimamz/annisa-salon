@@ -214,7 +214,7 @@ function ItemEditor({ target, kind, cats, defaultCat, nextSort, onClose, onSave,
   useEffect(() => {
     if (!target) return;
     setName(it?.name ?? ''); setCatId(it?.cat ?? defaultCat); setK(it?.k ?? ''); setDesc(it?.desc ?? '');
-    setUnit(it?.unit ?? (kind === 'produk' || it?.cat === 'produk' || it?.id === 'facial-gbee' ? 'gbee' : 'salon'));
+    setUnit(it?.unit ?? (kind === 'produk' || it?.cat === 'produk' ? 'gbee' : 'salon'));
     setMode(it?.variants ? 'multi' : 'single'); setPrice(it?.price ? money(it.price) : '');
     setWebPrice(it?.webPrice ? money(it.webPrice) : '');
     setVlabel(it?.vlabel ?? '');

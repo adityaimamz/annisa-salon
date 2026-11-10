@@ -93,7 +93,7 @@ export default function KeuanganView({ cats, refreshKey, onOpenPengeluaran }: { 
   const tone = (a: number, b: number, upIsGood: boolean) => (b && a !== b ? ((a > b) === upIsGood ? ' up' : ' down') : '');
 
   const lines = tx.flatMap((t) => t.lines.filter((l) => {
-    const u = l.unit ?? (l.cat === 'produk' || l.id === 'facial-gbee' ? 'gbee' : 'salon');
+    const u = l.unit ?? (l.cat === 'produk' ? 'gbee' : 'salon');
     return unitFilter === 'all' || u === unitFilter;
   }));
   const byCat = cats.map((c) => ({ name: c.name, v: lines.filter((l) => l.cat === c.id).reduce((a, l) => a + l.price * l.qty, 0) })).sort((a, b) => b.v - a.v);
