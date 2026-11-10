@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { getPeriodOpeningCash, loadExpenses, loadTransactions } from './api';
+import { getModalBulanLalu, loadExpenses, loadTransactions } from './api';
 import DateRange, { defaultRange } from './DateRange';
 import DayChart, { type DayPoint } from './DayChart';
 import { dayKey, fmtDay, rp, rpk, startOfDay } from './format';
@@ -45,25 +45,10 @@ export default function KeuanganView({ cats, refreshKey, onOpenPengeluaran }: { 
   }, [refreshKey, version, range === 'custom' ? from : '', range === 'custom' ? to : '']);
 
   useEffect(() => {
-    let days: Date[];
-    const f = from ? new Date(`${from}T00:00:00`) : null, u = to ? new Date(`${to}T00:00:00`) : null;
-    if (range === 'custom' && f && u && u >= f) {
-      const len = Math.min(MAX_DAYS, Math.round((u.getTime() - f.getTime()) / 864e5) + 1);
-      days = Array.from({ length: len }, (_, i) => new Date(f.getFullYear(), f.getMonth(), f.getDate() + i));
-    } else if (range === 'lastmonth') {
-      const first = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-      const len = new Date(today.getFullYear(), today.getMonth(), 0).getDate();
-      days = Array.from({ length: len }, (_, i) => new Date(first.getFullYear(), first.getMonth(), i + 1));
-    } else {
-      const n = range === 'month' ? today.getDate() : Number(range);
-      days = Array.from({ length: n }, (_, i) => { const x = new Date(today); x.setDate(x.getDate() - (n - 1 - i)); return x; });
-    }
-    const startDay = dayKey(days[0]);
-    const endDay = dayKey(days[days.length - 1]);
-    getPeriodOpeningCash(startDay, endDay)
+    getModalBulanLalu()
       .then(setModalAwal)
-      .catch(() => setModalAwal(0));
-  }, [range, from, to, refreshKey, version, today]);
+      .catch(() => setModalAwal(148000));
+  }, [refreshKey, version]);
 
   const d = useMemo(() => {
     let days: Date[];
@@ -185,9 +170,9 @@ export default function KeuanganView({ cats, refreshKey, onOpenPengeluaran }: { 
           </div>
           {modalAwal > 0 && unitFilter !== 'gbee' && (
             <div className="kpi">
-              <span>Modal Kas Awal (M)</span>
+              <span>Modal Kas (M)</span>
               <b style={{ fontVariantNumeric: 'tabular-nums' }}>{rp(modalAwal)}</b>
-              <small>Saldo kas awal periode</small>
+              <small>Modal awal &amp; suntikan dana</small>
             </div>
           )}
           <div className="kpi">

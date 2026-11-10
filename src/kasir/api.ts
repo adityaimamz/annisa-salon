@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 import type {
-  BusinessUnit, CartLine, Category, DailyCashSummary, Expense, Item, PayMethod, Photo, Profile, StaffMember, Therapist, Tx, TxLine,
+  BusinessUnit, CapitalInjection, CartLine, Category, DailyCashSummary, Expense, Item, PayMethod, Photo, Profile, StaffMember, Therapist, Tx, TxLine,
 } from './types';
 
 function db() {
@@ -272,17 +272,84 @@ export async function saveDailyCashBook(p: {
   return data as DailyCashSummary;
 }
 
-export async function getPeriodOpeningCash(startDay: string, endDay: string): Promise<number> {
+export async function getModalBulanLalu(): Promise<number> {
+  // Ambil total suntikan modal awal bulan berjalan jika ada, atau fallback ke setting/148000
+  const { data: injections } = await db()
+    .from('capital_injections')
+    .select('amount');
+  if (injections && injections.length > 0) {
+    return injections.reduce((acc, cur) => acc + Number(cur.amount || 0), 0);
+  }
   const { data, error } = await db()
-    .from('daily_cash_books')
-    .select('opening_cash')
-    .gte('day', startDay)
-    .lte('day', endDay)
-    .order('day', { ascending: true })
-    .limit(1)
+    .from('app_settings')
+    .select('value')
+    .eq('key', 'modal_bulan_lalu')
     .maybeSingle();
-  if (error || !data) return 0;
-  return (data as { opening_cash: number }).opening_cash ?? 0;
+  if (error || !data) return 148000;
+  const n = Number(data.value);
+  return Number.isFinite(n) ? n : 148000;
+}
+
+export async function setModalBulanLalu(amount: number): Promise<number> {
+  const amt = Math.max(0, Math.round(amount));
+  await db()
+    .from('app_settings')
+    .upsert({
+      key: 'modal_bulan_lalu',
+      value: String(amt),
+      updated_at: new Date().toISOString(),
+    });
+  return amt;
+}
+
+/* ---------- suntikan modal (capital injections) ---------- */
+export async function loadCapitalInjections(sinceMs?: number): Promise<CapitalInjection[]> {
+  let q = db().from('capital_injections').select('*').order('created_at', { ascending: false });
+  if (sinceMs) q = q.gte('created_at', new Date(sinceMs).toISOString());
+  const { data, error } = await q;
+  fail(error);
+  return (data as { id: number; created_at: string; amount: number; category: string; note: string | null; created_by: string | null }[])
+    .map((r) => ({
+      id: r.id,
+      at: new Date(r.created_at).getTime(),
+      amt: Number(r.amount),
+      cat: r.category,
+      note: r.note ?? '',
+      by: r.created_by ?? undefined,
+    }));
+}
+
+export async function addCapitalInjection(p: { amt: number; cat: string; note?: string; at?: number; by?: string }): Promise<CapitalInjection> {
+  const { data, error } = await db()
+    .from('capital_injections')
+    .insert({
+      amount: Math.max(0, Math.round(p.amt)),
+      category: p.cat || 'Modal Awal Bulan',
+      note: p.note || null,
+      created_at: p.at ? new Date(p.at).toISOString() : new Date().toISOString(),
+      created_by: p.by || null,
+    })
+    .select('*')
+    .single();
+  fail(error);
+  const r = data as { id: number; created_at: string; amount: number; category: string; note: string | null; created_by: string | null };
+  return {
+    id: r.id,
+    at: new Date(r.created_at).getTime(),
+    amt: Number(r.amount),
+    cat: r.category,
+    note: r.note ?? '',
+    by: r.created_by ?? undefined,
+  };
+}
+
+export async function deleteCapitalInjection(id: number): Promise<void> {
+  const { error } = await db().from('capital_injections').delete().eq('id', id);
+  fail(error);
+}
+
+export async function getPeriodOpeningCash(startDay: string, endDay: string): Promise<number> {
+  return getModalBulanLalu();
 }
 
 /* ---------- karyawan (hanya owner; ditegakkan RPC + RLS) ---------- */

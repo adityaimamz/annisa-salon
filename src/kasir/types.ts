@@ -83,6 +83,22 @@ export interface Expense {
   unit?: 'salon' | 'gbee' | 'operasional';
 }
 
+export interface CapitalInjection {
+  id: number;
+  at: number;
+  amt: number;
+  cat: string;
+  note: string;
+  by?: string;
+}
+
+export const CAPITAL_CATS = [
+  'Modal Awal Bulan',
+  'Uang Kembalian Kasir',
+  'Suntikan Dana Operasional',
+  'Lainnya',
+];
+
 export interface CartLine {
   key: string;
   id: string;

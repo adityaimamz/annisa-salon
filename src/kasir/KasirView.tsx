@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { createTransaction } from './api';
-import BukuKasSheet from './BukuKasSheet';
 import { enqueue, isNetworkError } from './offline';
 import { money, num, rp, rpk } from './format';
 import type { CartLine, Category, Item, PayMethod, Profile, Therapist, Tx } from './types';
@@ -39,7 +38,6 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
   const [opt, setOpt] = useState('');
   const [receipt, setReceipt] = useState<Tx | null>(null);
   const [paying, setPaying] = useState(false);
-  const [bukuKasOpen, setBukuKasOpen] = useState(false);
 
   const q = query.trim().toLowerCase();
   const list = useMemo(
@@ -151,17 +149,11 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
       <div className="pos">
         <div className="catalog">
           <div className="cat-tools">
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', width: '100%' }}>
-              <label className="search" style={{ flex: 1 }}>
-                {Icon.search()}
-                <input className="input" type="search" placeholder="Cari layanan atau produk…" autoComplete="off"
-                  aria-label="Cari layanan atau produk" value={query} onChange={(e) => setQuery(e.target.value)} />
-              </label>
-              <button type="button" className="btn btn-line btn-sm" style={{ whiteSpace: 'nowrap', height: 42, padding: '0 12px' }}
-                onClick={() => setBukuKasOpen(true)}>
-                📖 Buku Kas
-              </button>
-            </div>
+            <label className="search">
+              {Icon.search()}
+              <input className="input" type="search" placeholder="Cari layanan atau produk…" autoComplete="off"
+                aria-label="Cari layanan atau produk" value={query} onChange={(e) => setQuery(e.target.value)} />
+            </label>
             <div className="tabs" role="group" aria-label="Kategori">
               <button className="tab" aria-pressed={cat === 'all'} onClick={() => setCat('all')}>Semua</button>
               {cats.map((c) => (
@@ -315,8 +307,6 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
       </Sheet>
 
       <ReceiptSheet tx={receipt} fresh onClose={() => setReceipt(null)} />
-
-      <BukuKasSheet open={bukuKasOpen} onClose={() => setBukuKasOpen(false)} role={profile.role} onSaved={onPaid} />
     </section>
   );
 }
