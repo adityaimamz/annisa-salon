@@ -366,10 +366,12 @@ export async function getPeriodModal(startMs: number, endMs: number): Promise<nu
 }
 
 export async function saveDailyCashOpening(day: string, openingCash: number): Promise<DailyCashSummary> {
-  return saveDailyCashBook({
-    day,
-    openingCash,
+  const { data, error } = await db().rpc('save_daily_cash_opening', {
+    p_day: day,
+    p_opening_cash: Math.max(0, Math.round(openingCash)),
   });
+  fail(error);
+  return data as DailyCashSummary;
 }
 
 /* ---------- karyawan (hanya owner; ditegakkan RPC + RLS) ---------- */
