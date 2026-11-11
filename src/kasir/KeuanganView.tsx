@@ -28,7 +28,7 @@ export default function KeuanganView({ cats, refreshKey, onOpenPengeluaran }: { 
   const openExp = (x: Expense | null) => { setEditing(x); setExpOpen(true); };
   const [version, setVersion] = useState(0);
   const [modalAwal, setModalAwal] = useState<number>(0);
-  const today = startOfDay(new Date());
+  const today = useMemo(() => startOfDay(new Date()), []);
 
   useEffect(() => {
     // 31 hari periode ini + 31 hari periode sebelumnya
@@ -61,6 +61,11 @@ export default function KeuanganView({ cats, refreshKey, onOpenPengeluaran }: { 
   const [editModal, setEditModal] = useState(false);
   const [modalInput, setModalInput] = useState('');
   const [savingModal, setSavingModal] = useState(false);
+
+  // Tutup mode edit jika tanggal berganti
+  useEffect(() => {
+    setEditModal(false);
+  }, [targetDay]);
 
   const d = useMemo(() => {
     let days: Date[];
@@ -106,36 +111,40 @@ export default function KeuanganView({ cats, refreshKey, onOpenPengeluaran }: { 
   const delta = (a: number, b: number) => (b ? `${a >= b ? '▲' : '▼'} ${Math.abs(Math.round(((a - b) / b) * 100))}% vs periode lalu` : '');
   const tone = (a: number, b: number, upIsGood: boolean) => (b && a !== b ? ((a > b) === upIsGood ? ' up' : ' down') : '');
 
+  // Ambil summary kas laci untuk single-day
   useEffect(() => {
+    if (!isSingleDay) return;
     let ignore = false;
-    if (isSingleDay) {
-      getDailyCashSummary(targetDay)
-        .then((s) => {
-          if (!ignore) {
-            setCashSummary(s);
-            setModalAwal(s.opening_cash);
-            setModalInput(money(s.opening_cash));
-            setEditModal(false);
-          }
-        })
-        .catch(() => {
-          if (!ignore) setModalAwal(0);
-        });
-    } else {
-      setCashSummary(null);
-      getPeriodModal(d.start, d.last.getTime() + 864e5)
-        .then((val) => {
-          if (!ignore) {
-            setModalAwal(val);
-            setEditModal(false);
-          }
-        })
-        .catch(() => {
-          if (!ignore) setModalAwal(0);
-        });
-    }
+    getDailyCashSummary(targetDay)
+      .then((s) => {
+        if (!ignore) {
+          setCashSummary(s);
+          setModalAwal(s.opening_cash);
+        }
+      })
+      .catch(() => {
+        if (!ignore) setModalAwal(0);
+      });
     return () => { ignore = true; };
-  }, [isSingleDay, targetDay, d.start, d.last, refreshKey, version]);
+  }, [isSingleDay, targetDay, refreshKey, version]);
+
+  // Ambil total suntikan modal untuk rentang multi-hari
+  const periodEndMs = d.last.getTime() + 864e5;
+  useEffect(() => {
+    if (isSingleDay) return;
+    let ignore = false;
+    setCashSummary(null);
+    getPeriodModal(d.start, periodEndMs)
+      .then((val) => {
+        if (!ignore) {
+          setModalAwal(val);
+        }
+      })
+      .catch(() => {
+        if (!ignore) setModalAwal(0);
+      });
+    return () => { ignore = true; };
+  }, [isSingleDay, d.start, periodEndMs, refreshKey, version]);
 
   async function handleSaveModal() {
     if (savingModal || !isSingleDay) return;
@@ -254,9 +263,11 @@ export default function KeuanganView({ cats, refreshKey, onOpenPengeluaran }: { 
                   <button
                     type="button"
                     className="linkbtn"
-                    style={{ fontSize: 11.5, padding: '0 2px', fontWeight: 600 }}
-                    onClick={() => {
-                      setModalInput(money(modalAwal));
+                    style={{ fontSize: 12, padding: '2px 6px', fontWeight: 600, color: 'var(--green, #1F8A5B)' }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setModalInput(String(modalAwal));
                       setEditModal(true);
                     }}
                     title="Ubah modal kas hari ini"
@@ -266,39 +277,46 @@ export default function KeuanganView({ cats, refreshKey, onOpenPengeluaran }: { 
                 )}
               </div>
               {editModal && isSingleDay ? (
-                <div style={{ marginTop: 4, display: 'flex', gap: 4, alignItems: 'center' }}>
-                  <label className="money" style={{ flex: 1, minWidth: 0, margin: 0 }}>
-                    <span style={{ fontSize: 11 }}>Rp</span>
-                    <input
-                      className="input"
-                      inputMode="numeric"
-                      autoFocus
-                      style={{ height: 28, fontSize: 13, padding: '2px 4px', fontWeight: 600, textAlign: 'right' }}
-                      value={money(num(modalInput))}
-                      onChange={(e) => setModalInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleSaveModal();
-                        if (e.key === 'Escape') setEditModal(false);
-                      }}
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    className="btn btn-green btn-sm"
-                    style={{ padding: '2px 8px', height: 28, fontSize: 11 }}
-                    onClick={handleSaveModal}
-                    disabled={savingModal}
-                  >
-                    {savingModal ? '…' : 'Simpan'}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-line btn-sm"
-                    style={{ padding: '2px 6px', height: 28, fontSize: 11 }}
-                    onClick={() => setEditModal(false)}
-                  >
-                    ✕
-                  </button>
+                <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 6 }} onClick={(e) => e.stopPropagation()}>
+                  <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                    <label className="money" style={{ flex: 1, minWidth: 0, margin: 0 }}>
+                      <span style={{ fontSize: 12 }}>Rp</span>
+                      <input
+                        className="input"
+                        inputMode="numeric"
+                        autoFocus
+                        style={{ height: 32, fontSize: 13, padding: '2px 6px', fontWeight: 700, textAlign: 'right' }}
+                        value={money(num(modalInput))}
+                        onChange={(e) => setModalInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleSaveModal();
+                          }
+                          if (e.key === 'Escape') setEditModal(false);
+                        }}
+                      />
+                    </label>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button
+                      type="button"
+                      className="btn btn-green btn-sm"
+                      style={{ flex: 1, padding: '4px 8px', height: 28, fontSize: 11 }}
+                      onClick={handleSaveModal}
+                      disabled={savingModal}
+                    >
+                      {savingModal ? 'Menyimpan…' : 'Simpan'}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-line btn-sm"
+                      style={{ padding: '4px 8px', height: 28, fontSize: 11 }}
+                      onClick={() => setEditModal(false)}
+                    >
+                      Batal
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <>
