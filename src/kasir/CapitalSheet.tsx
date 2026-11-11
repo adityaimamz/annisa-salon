@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
-import { addCapitalInjection, deleteCapitalInjection, loadCapitalInjections } from './api';
+import { useEffect, useMemo, useState } from 'react';
+import { addCapitalInjection, deleteCapitalInjection, loadCapitalInjections, loadDailyCashLogs } from './api';
 import { dayKey, fmtDay, fmtTime, money, num, rp } from './format';
-import { CAPITAL_CATS, type CapitalInjection } from './types';
+import { CAPITAL_CATS, type CapitalInjection, type DailyCashLog } from './types';
 import { CloseBtn, Sheet, useConfirm, useToast } from './ui';
 
 interface Props {
@@ -10,11 +10,25 @@ interface Props {
   onSaved: () => void;
 }
 
+type HistoryItem = {
+  type: 'injection' | 'adjustment';
+  id: string;
+  at: number;
+  amt: number;
+  oldAmt?: number | null;
+  cat: string;
+  note: string;
+  by?: string;
+  rawInjection?: CapitalInjection;
+};
+
 export default function CapitalSheet({ open, onClose, onSaved }: Props) {
   const toast = useToast();
   const confirm = useConfirm();
   const [tab, setTab] = useState<'add' | 'history'>('add');
   const [injections, setInjections] = useState<CapitalInjection[]>([]);
+  const [cashLogs, setCashLogs] = useState<DailyCashLog[]>([]);
+  const [logFilter, setLogFilter] = useState<'all' | 'injection' | 'adjustment'>('all');
   const [loadingHistory, setLoadingHistory] = useState(false);
 
   // Form states
@@ -38,14 +52,53 @@ export default function CapitalSheet({ open, onClose, onSaved }: Props) {
   async function refreshHistory() {
     setLoadingHistory(true);
     try {
-      const data = await loadCapitalInjections();
-      setInjections(data);
+      const [injData, logsData] = await Promise.all([
+        loadCapitalInjections(),
+        loadDailyCashLogs(50),
+      ]);
+      setInjections(injData);
+      setCashLogs(logsData);
     } catch (e) {
       console.error(e);
     } finally {
       setLoadingHistory(false);
     }
   }
+
+  const historyItems = useMemo<HistoryItem[]>(() => {
+    const list: HistoryItem[] = [];
+    for (const item of injections) {
+      list.push({
+        type: 'injection',
+        id: `inj-${item.id}`,
+        at: item.at,
+        amt: item.amt,
+        cat: item.cat,
+        note: item.note,
+        by: item.by,
+        rawInjection: item,
+      });
+    }
+    for (const log of cashLogs) {
+      list.push({
+        type: 'adjustment',
+        id: `log-${log.id}`,
+        at: new Date(log.created_at).getTime(),
+        amt: log.new_amount,
+        oldAmt: log.old_amount,
+        cat: 'Penyesuaian Kas Laci',
+        note: log.note || '',
+        by: log.user_name || undefined,
+      });
+    }
+    return list.sort((a, b) => b.at - a.at);
+  }, [injections, cashLogs]);
+
+  const filteredHistory = useMemo(() => {
+    if (logFilter === 'injection') return historyItems.filter((x) => x.type === 'injection');
+    if (logFilter === 'adjustment') return historyItems.filter((x) => x.type === 'adjustment');
+    return historyItems;
+  }, [historyItems, logFilter]);
 
   const finalCat = customCat.trim() || cat;
   const canSubmit = !!num(amt) && finalCat;
@@ -123,7 +176,7 @@ export default function CapitalSheet({ open, onClose, onSaved }: Props) {
             onClick={() => setTab('history')}
             style={{ flex: 1, textAlign: 'center' }}
           >
-            📜 Riwayat ({injections.length})
+            📜 Riwayat ({historyItems.length})
           </button>
         </div>
 
@@ -208,22 +261,74 @@ export default function CapitalSheet({ open, onClose, onSaved }: Props) {
               background: 'var(--card-sub, #f5f4ef)',
               padding: '10px 14px',
               borderRadius: 8,
-              marginBottom: 14,
+              marginBottom: 12,
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'baseline',
             }}>
-              <span style={{ fontSize: 13, color: 'var(--ink-2)' }}>Total Modal Masuk:</span>
+              <div>
+                <span style={{ fontSize: 13, color: 'var(--ink-2)' }}>Total Modal Masuk:</span>
+                <span style={{ display: 'block', fontSize: 11, color: 'var(--ink-3)' }}>*Suntikan dana riil ke kas</span>
+              </div>
               <b style={{ fontSize: 16, color: 'var(--green, #1F8A5B)' }}>{rp(totalCapital)}</b>
+            </div>
+
+            {/* Filter pills */}
+            <div style={{ display: 'flex', gap: 6, marginBottom: 12, overflowX: 'auto', paddingBottom: 2 }}>
+              <button
+                type="button"
+                className={`linkbtn ${logFilter === 'all' ? 'active' : ''}`}
+                onClick={() => setLogFilter('all')}
+                style={{
+                  fontSize: 11.5,
+                  padding: '3px 8px',
+                  borderRadius: 6,
+                  background: logFilter === 'all' ? 'var(--ink)' : 'var(--card-sub, #f0efe9)',
+                  color: logFilter === 'all' ? '#fff' : 'var(--ink-2)',
+                  fontWeight: 600,
+                }}
+              >
+                Semua ({historyItems.length})
+              </button>
+              <button
+                type="button"
+                className={`linkbtn ${logFilter === 'injection' ? 'active' : ''}`}
+                onClick={() => setLogFilter('injection')}
+                style={{
+                  fontSize: 11.5,
+                  padding: '3px 8px',
+                  borderRadius: 6,
+                  background: logFilter === 'injection' ? 'var(--ink)' : 'var(--card-sub, #f0efe9)',
+                  color: logFilter === 'injection' ? '#fff' : 'var(--ink-2)',
+                  fontWeight: 600,
+                }}
+              >
+                Suntikan Modal ({injections.length})
+              </button>
+              <button
+                type="button"
+                className={`linkbtn ${logFilter === 'adjustment' ? 'active' : ''}`}
+                onClick={() => setLogFilter('adjustment')}
+                style={{
+                  fontSize: 11.5,
+                  padding: '3px 8px',
+                  borderRadius: 6,
+                  background: logFilter === 'adjustment' ? 'var(--ink)' : 'var(--card-sub, #f0efe9)',
+                  color: logFilter === 'adjustment' ? '#fff' : 'var(--ink-2)',
+                  fontWeight: 600,
+                }}
+              >
+                Penyesuaian Kas ({cashLogs.length})
+              </button>
             </div>
 
             {loadingHistory ? (
               <p className="muted" style={{ textAlign: 'center', padding: 20 }}>Memuat riwayat…</p>
-            ) : injections.length === 0 ? (
-              <p className="muted" style={{ textAlign: 'center', padding: 20 }}>Belum ada catatan modal.</p>
+            ) : filteredHistory.length === 0 ? (
+              <p className="muted" style={{ textAlign: 'center', padding: 20 }}>Belum ada catatan riwayat modal.</p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 380, overflowY: 'auto' }}>
-                {injections.map((item) => (
+                {filteredHistory.map((item) => (
                   <div
                     key={item.id}
                     style={{
@@ -233,37 +338,58 @@ export default function CapitalSheet({ open, onClose, onSaved }: Props) {
                       padding: '10px 12px',
                       display: 'flex',
                       justifyContent: 'space-between',
-                      alignItems: 'center',
+                      alignItems: 'flex-start',
                     }}
                   >
                     <div style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span className="pill" style={{ fontSize: 11, background: '#E8F5E9', color: '#1B5E20' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span
+                          className="pill"
+                          style={{
+                            fontSize: 11,
+                            background: item.type === 'injection' ? '#E8F5E9' : '#E3F2FD',
+                            color: item.type === 'injection' ? '#1B5E20' : '#1565C0',
+                          }}
+                        >
                           {item.cat}
                         </span>
                         <span style={{ fontSize: 11.5, color: 'var(--ink-3)' }}>
                           {fmtDay(item.at, { day: 'numeric', month: 'short' })} · {fmtTime(item.at)}
                         </span>
+                        {item.by && (
+                          <span style={{ fontSize: 10.5, color: 'var(--ink-3)', background: 'var(--card-sub)', padding: '1px 5px', borderRadius: 4 }}>
+                            {item.by}
+                          </span>
+                        )}
                       </div>
                       {item.note && (
-                        <p style={{ margin: '4px 0 0', fontSize: 12.5, color: 'var(--ink-2)' }}>
+                        <p style={{ margin: '6px 0 0', fontSize: 12.5, color: 'var(--ink-2)', lineHeight: 1.4 }}>
                           {item.note}
                         </p>
                       )}
                     </div>
-                    <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <b style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--ink)' }}>
-                        +{rp(item.amt)}
-                      </b>
-                      <button
-                        type="button"
-                        className="linkbtn"
-                        style={{ color: 'var(--red, #D32F2F)', fontSize: 12, padding: '2px 4px' }}
-                        onClick={() => handleDelete(item)}
-                        title="Hapus catatan modal ini"
-                      >
-                        ✕
-                      </button>
+                    <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                      <div style={{ textAlign: 'right' }}>
+                        <b style={{ fontVariantNumeric: 'tabular-nums', color: item.type === 'injection' ? 'var(--green, #1F8A5B)' : 'var(--ink)' }}>
+                          {item.type === 'injection' ? `+${rp(item.amt)}` : rp(item.amt)}
+                        </b>
+                        {item.oldAmt != null && item.oldAmt !== item.amt && (
+                          <div style={{ fontSize: 10.5, color: 'var(--ink-3)', textDecoration: 'line-through' }}>
+                            {rp(item.oldAmt)}
+                          </div>
+                        )}
+                      </div>
+                      {item.rawInjection && (
+                        <button
+                          type="button"
+                          className="linkbtn"
+                          style={{ color: 'var(--red, #D32F2F)', fontSize: 12, padding: '2px 4px' }}
+                          onClick={() => handleDelete(item.rawInjection!)}
+                          title="Hapus catatan modal ini"
+                        >
+                          ✕
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -275,4 +401,3 @@ export default function CapitalSheet({ open, onClose, onSaved }: Props) {
     </Sheet>
   );
 }
-

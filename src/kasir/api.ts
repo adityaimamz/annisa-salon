@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 import type {
-  BusinessUnit, CapitalInjection, CartLine, Category, DailyCashSummary, Expense, Item, PayMethod, Photo, Profile, StaffMember, Therapist, Tx, TxLine,
+  BusinessUnit, CapitalInjection, CartLine, Category, DailyCashLog, DailyCashSummary, Expense, Item, PayMethod, Photo, Profile, StaffMember, Therapist, Tx, TxLine,
 } from './types';
 
 function db() {
@@ -365,13 +365,20 @@ export async function getPeriodModal(startMs: number, endMs: number): Promise<nu
     .reduce((acc, cur) => acc + Number(cur.amount || 0), 0);
 }
 
-export async function saveDailyCashOpening(day: string, openingCash: number): Promise<DailyCashSummary> {
+export async function saveDailyCashOpening(day: string, openingCash: number, note?: string): Promise<DailyCashSummary> {
   const { data, error } = await db().rpc('save_daily_cash_opening', {
     p_day: day,
     p_opening_cash: Math.max(0, Math.round(openingCash)),
+    p_note: note || null,
   });
   fail(error);
   return data as DailyCashSummary;
+}
+
+export async function loadDailyCashLogs(limit: number = 50): Promise<DailyCashLog[]> {
+  const { data, error } = await db().rpc('list_daily_cash_logs', { p_limit: limit });
+  if (error || !data) return [];
+  return data as DailyCashLog[];
 }
 
 /* ---------- karyawan (hanya owner; ditegakkan RPC + RLS) ---------- */

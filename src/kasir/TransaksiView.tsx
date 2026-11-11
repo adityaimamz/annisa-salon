@@ -43,6 +43,7 @@ export default function TransaksiView({ refreshKey, therapists, items }: { refre
   const [cashSummary, setCashSummary] = useState<DailyCashSummary | null>(null);
   const [editModal, setEditModal] = useState(false);
   const [modalInput, setModalInput] = useState('');
+  const [modalNote, setModalNote] = useState('');
   const [savingModal, setSavingModal] = useState(false);
   const [capitalOpen, setCapitalOpen] = useState(false);
   const [modalRefreshKey, setModalRefreshKey] = useState(0);
@@ -118,10 +119,11 @@ export default function TransaksiView({ refreshKey, therapists, items }: { refre
     const val = num(modalInput);
     setSavingModal(true);
     try {
-      const s = await saveDailyCashOpening(activeDay, val);
+      const s = await saveDailyCashOpening(activeDay, val, modalNote.trim() || undefined);
       setCashSummary(s);
       setModal(s.opening_cash);
       setEditModal(false);
+      setModalNote('');
       setModalRefreshKey((k) => k + 1);
       toast(`Modal kas (${fmtDay(new Date(activeDay + 'T00:00:00'), { day: 'numeric', month: 'short' })}) diperbarui: ${rp(val)}`);
     } catch (e) {
@@ -292,6 +294,7 @@ export default function TransaksiView({ refreshKey, therapists, items }: { refre
                       e.preventDefault();
                       e.stopPropagation();
                       setModalInput(String(modal));
+                      setModalNote('');
                       setEditModal(true);
                     }}
                     title="Ubah modal awal hari ini"
@@ -334,6 +337,20 @@ export default function TransaksiView({ refreshKey, therapists, items }: { refre
                     />
                   </label>
                 </div>
+                <input
+                  className="input"
+                  placeholder="Keterangan / alasan (opsional)…"
+                  style={{ height: 26, fontSize: 11.5, padding: '2px 6px' }}
+                  value={modalNote}
+                  onChange={(e) => setModalNote(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSaveModal();
+                    }
+                    if (e.key === 'Escape') setEditModal(false);
+                  }}
+                />
                 <div style={{ display: 'flex', gap: 6 }}>
                   <button
                     type="button"

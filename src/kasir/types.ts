@@ -92,6 +92,17 @@ export interface CapitalInjection {
   by?: string;
 }
 
+export interface DailyCashLog {
+  id: number;
+  day: string;
+  action: string;
+  old_amount: number | null;
+  new_amount: number;
+  note: string | null;
+  created_at: string;
+  user_name: string | null;
+}
+
 export const CAPITAL_CATS = [
   'Modal Awal Bulan',
   'Uang Kembalian Kasir',

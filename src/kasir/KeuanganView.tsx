@@ -60,6 +60,7 @@ export default function KeuanganView({ cats, refreshKey, onOpenPengeluaran }: { 
   const [cashSummary, setCashSummary] = useState<DailyCashSummary | null>(null);
   const [editModal, setEditModal] = useState(false);
   const [modalInput, setModalInput] = useState('');
+  const [modalNote, setModalNote] = useState('');
   const [savingModal, setSavingModal] = useState(false);
 
   // Tutup mode edit jika tanggal berganti
@@ -151,10 +152,11 @@ export default function KeuanganView({ cats, refreshKey, onOpenPengeluaran }: { 
     const val = num(modalInput);
     setSavingModal(true);
     try {
-      const s = await saveDailyCashOpening(targetDay, val);
+      const s = await saveDailyCashOpening(targetDay, val, modalNote.trim() || undefined);
       setCashSummary(s);
       setModalAwal(s.opening_cash);
       setEditModal(false);
+      setModalNote('');
       setVersion((v) => v + 1);
       toast(`Modal kas (${fmtDay(new Date(targetDay + 'T00:00:00'), { day: 'numeric', month: 'short' })}) diperbarui: ${rp(val)}`);
     } catch (e) {
@@ -268,6 +270,7 @@ export default function KeuanganView({ cats, refreshKey, onOpenPengeluaran }: { 
                       e.preventDefault();
                       e.stopPropagation();
                       setModalInput(String(modalAwal));
+                      setModalNote('');
                       setEditModal(true);
                     }}
                     title="Ubah modal kas hari ini"
@@ -298,6 +301,20 @@ export default function KeuanganView({ cats, refreshKey, onOpenPengeluaran }: { 
                       />
                     </label>
                   </div>
+                  <input
+                    className="input"
+                    placeholder="Keterangan / alasan (opsional)…"
+                    style={{ height: 26, fontSize: 11.5, padding: '2px 6px' }}
+                    value={modalNote}
+                    onChange={(e) => setModalNote(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleSaveModal();
+                      }
+                      if (e.key === 'Escape') setEditModal(false);
+                    }}
+                  />
                   <div style={{ display: 'flex', gap: 6 }}>
                     <button
                       type="button"
