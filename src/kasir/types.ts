@@ -133,6 +133,7 @@ export interface DailyCashSummary {
   transfer_sales_gbee: number;
   transfer_sales_total: number;
   cash_expenses: number;
+  capital_injections?: number;
   expected_cash: number;
   difference: number | null;
   tx_lines: {

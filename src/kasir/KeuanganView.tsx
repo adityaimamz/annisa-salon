@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
-import { getModalBulanLalu, loadExpenses, loadTransactions } from './api';
+import {
+  getDailyCashSummary, getPeriodModal, loadExpenses, loadTransactions, saveDailyCashOpening,
+} from './api';
 import DateRange, { defaultRange } from './DateRange';
 import DayChart, { type DayPoint } from './DayChart';
-import { dayKey, fmtDay, rp, rpk, startOfDay } from './format';
+import { dayKey, fmtDay, money, num, rp, rpk, startOfDay } from './format';
 import ExpenseSheet, { expenseCats } from './ExpenseSheet';
 import { calcPortion } from './TransaksiView';
-import type { Category, Expense, Tx } from './types';
+import type { Category, DailyCashSummary, Expense, Tx } from './types';
 import { useToast } from './ui';
 
-type Range = '7' | '30' | 'month' | 'lastmonth' | 'custom';
+type Range = 'today' | '7' | '30' | 'month' | 'lastmonth' | 'custom';
 const MAX_DAYS = 366;
 const PAYC: Record<string, string> = { Tunai: '#1F8A5B', QRIS: '#6A63C9', Transfer: '#7A817C' };
 
@@ -44,16 +46,28 @@ export default function KeuanganView({ cats, refreshKey, onOpenPengeluaran }: { 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshKey, version, range === 'custom' ? from : '', range === 'custom' ? to : '']);
 
-  useEffect(() => {
-    getModalBulanLalu()
-      .then(setModalAwal)
-      .catch(() => setModalAwal(148000));
-  }, [refreshKey, version]);
+  const isSingleDay = useMemo(() => {
+    if (range === 'today') return true;
+    if (range === 'custom' && from && (!to || from === to)) return true;
+    return false;
+  }, [range, from, to]);
+
+  const targetDay = useMemo(() => {
+    if (range === 'custom' && from) return from;
+    return dayKey(today);
+  }, [range, from, today]);
+
+  const [cashSummary, setCashSummary] = useState<DailyCashSummary | null>(null);
+  const [editModal, setEditModal] = useState(false);
+  const [modalInput, setModalInput] = useState('');
+  const [savingModal, setSavingModal] = useState(false);
 
   const d = useMemo(() => {
     let days: Date[];
     const f = from ? new Date(`${from}T00:00:00`) : null, u = to ? new Date(`${to}T00:00:00`) : null;
-    if (range === 'custom' && f && u && u >= f) {
+    if (range === 'today') {
+      days = [new Date(today)];
+    } else if (range === 'custom' && f && u && u >= f) {
       const len = Math.min(MAX_DAYS, Math.round((u.getTime() - f.getTime()) / 864e5) + 1);
       days = Array.from({ length: len }, (_, i) => new Date(f.getFullYear(), f.getMonth(), f.getDate() + i));
     } else if (range === 'lastmonth') {
@@ -92,6 +106,66 @@ export default function KeuanganView({ cats, refreshKey, onOpenPengeluaran }: { 
   const delta = (a: number, b: number) => (b ? `${a >= b ? '▲' : '▼'} ${Math.abs(Math.round(((a - b) / b) * 100))}% vs periode lalu` : '');
   const tone = (a: number, b: number, upIsGood: boolean) => (b && a !== b ? ((a > b) === upIsGood ? ' up' : ' down') : '');
 
+  useEffect(() => {
+    let ignore = false;
+    if (isSingleDay) {
+      getDailyCashSummary(targetDay)
+        .then((s) => {
+          if (!ignore) {
+            setCashSummary(s);
+            setModalAwal(s.opening_cash);
+            setModalInput(money(s.opening_cash));
+            setEditModal(false);
+          }
+        })
+        .catch(() => {
+          if (!ignore) setModalAwal(0);
+        });
+    } else {
+      setCashSummary(null);
+      getPeriodModal(d.start, d.last.getTime() + 864e5)
+        .then((val) => {
+          if (!ignore) {
+            setModalAwal(val);
+            setEditModal(false);
+          }
+        })
+        .catch(() => {
+          if (!ignore) setModalAwal(0);
+        });
+    }
+    return () => { ignore = true; };
+  }, [isSingleDay, targetDay, d.start, d.last, refreshKey, version]);
+
+  async function handleSaveModal() {
+    if (savingModal || !isSingleDay) return;
+    const val = num(modalInput);
+    setSavingModal(true);
+    try {
+      const s = await saveDailyCashOpening(targetDay, val);
+      setCashSummary(s);
+      setModalAwal(s.opening_cash);
+      setEditModal(false);
+      setVersion((v) => v + 1);
+      toast(`Modal kas (${fmtDay(new Date(targetDay + 'T00:00:00'), { day: 'numeric', month: 'short' })}) diperbarui: ${rp(val)}`);
+    } catch (e) {
+      toast(`Gagal menyimpan modal: ${(e as Error).message}`, true);
+    } finally {
+      setSavingModal(false);
+    }
+  }
+
+  const incTunai = tx.filter((t) => t.pay === 'Tunai').reduce((a, t) => a + (unitFilter === 'all' ? t.total : calcPortion(t)[unitFilter]), 0);
+  const outTunai = ex.filter((x) => (x.payMethod ?? 'Tunai') === 'Tunai').reduce((a, x) => a + x.amt, 0);
+
+  const cleanNetCash = isSingleDay
+    ? (unitFilter === 'all'
+        ? (cashSummary ? cashSummary.expected_cash : modalAwal + incTunai - outTunai)
+        : (unitFilter === 'salon'
+            ? modalAwal + incTunai - outTunai
+            : inc - out))
+    : inc - out + (unitFilter !== 'gbee' ? modalAwal : 0);
+
   const lines = tx.flatMap((t) => t.lines.filter((l) => {
     const u = l.unit ?? (l.cat === 'produk' ? 'gbee' : 'salon');
     return unitFilter === 'all' || u === unitFilter;
@@ -116,7 +190,7 @@ export default function KeuanganView({ cats, refreshKey, onOpenPengeluaran }: { 
     v: tx.filter((t) => t.pay === p).reduce((a, t) => a + (unitFilter === 'all' ? t.total : calcPortion(t)[unitFilter]), 0),
   }));
   const expSorted = ex.slice().sort((a, b) => b.at - a.at);
-  const seg: [Range, string][] = [['7', '7 hari'], ['30', '30 hari'], ['month', 'Bulan ini'], ['lastmonth', 'Bulan lalu'], ['custom', 'Pilih tanggal']];
+  const seg: [Range, string][] = [['today', 'Hari ini'], ['7', '7 hari'], ['30', '30 hari'], ['month', 'Bulan ini'], ['lastmonth', 'Bulan lalu'], ['custom', 'Pilih tanggal']];
   const hoverNone = typeof matchMedia !== 'undefined' && matchMedia('(hover: none)').matches;
 
   return (
@@ -146,13 +220,17 @@ export default function KeuanganView({ cats, refreshKey, onOpenPengeluaran }: { 
               )}
             </div>
             <b style={{ fontVariantNumeric: 'tabular-nums' }}>
-              {rp(inc - out + (unitFilter !== 'gbee' ? modalAwal : 0))}
+              {rp(cleanNetCash)}
             </b>
             <small>
-              {modalAwal > 0 && unitFilter !== 'gbee' ? (
-                <>Laba usaha {rp(inc - out)} · Modal awal (+M) +{rp(modalAwal)}</>
+              {isSingleDay ? (
+                <>Laba usaha {rp(inc - out)} · Sisa kas laci {rp(cleanNetCash)}</>
               ) : (
-                <>{inc ? `Margin ${Math.round(((inc - out) / inc) * 100)}%` : ''}</>
+                modalAwal > 0 && unitFilter !== 'gbee' ? (
+                  <>Laba usaha {rp(inc - out)} · Modal/suntikan (+M) +{rp(modalAwal)}</>
+                ) : (
+                  <>{inc ? `Margin ${Math.round(((inc - out) / inc) * 100)}%` : ''}</>
+                )
               )}
             </small>
           </div>
@@ -168,11 +246,66 @@ export default function KeuanganView({ cats, refreshKey, onOpenPengeluaran }: { 
             <b>{rp(out)}</b>
             <small className={tone(out, pout, false)}>{delta(out, pout)}</small>
           </div>
-          {modalAwal > 0 && unitFilter !== 'gbee' && (
+          {unitFilter !== 'gbee' && (
             <div className="kpi">
-              <span>Modal Kas (M)</span>
-              <b style={{ fontVariantNumeric: 'tabular-nums' }}>{rp(modalAwal)}</b>
-              <small>Modal awal &amp; suntikan dana</small>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Modal Kas (M)</span>
+                {isSingleDay && !editModal && (
+                  <button
+                    type="button"
+                    className="linkbtn"
+                    style={{ fontSize: 11.5, padding: '0 2px', fontWeight: 600 }}
+                    onClick={() => {
+                      setModalInput(money(modalAwal));
+                      setEditModal(true);
+                    }}
+                    title="Ubah modal kas hari ini"
+                  >
+                    ✎ Ubah
+                  </button>
+                )}
+              </div>
+              {editModal && isSingleDay ? (
+                <div style={{ marginTop: 4, display: 'flex', gap: 4, alignItems: 'center' }}>
+                  <label className="money" style={{ flex: 1, minWidth: 0, margin: 0 }}>
+                    <span style={{ fontSize: 11 }}>Rp</span>
+                    <input
+                      className="input"
+                      inputMode="numeric"
+                      autoFocus
+                      style={{ height: 28, fontSize: 13, padding: '2px 4px', fontWeight: 600, textAlign: 'right' }}
+                      value={money(num(modalInput))}
+                      onChange={(e) => setModalInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveModal();
+                        if (e.key === 'Escape') setEditModal(false);
+                      }}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="btn btn-green btn-sm"
+                    style={{ padding: '2px 8px', height: 28, fontSize: 11 }}
+                    onClick={handleSaveModal}
+                    disabled={savingModal}
+                  >
+                    {savingModal ? '…' : 'Simpan'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-line btn-sm"
+                    style={{ padding: '2px 6px', height: 28, fontSize: 11 }}
+                    onClick={() => setEditModal(false)}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <b style={{ fontVariantNumeric: 'tabular-nums' }}>{rp(modalAwal)}</b>
+                  <small>{isSingleDay ? 'Sisa kas kemarin / kas awal' : 'Suntikan modal di periode ini'}</small>
+                </>
+              )}
             </div>
           )}
           <div className="kpi">

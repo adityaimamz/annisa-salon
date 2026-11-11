@@ -352,6 +352,26 @@ export async function getPeriodOpeningCash(startDay: string, endDay: string): Pr
   return getModalBulanLalu();
 }
 
+export async function getPeriodModal(startMs: number, endMs: number): Promise<number> {
+  const { data, error } = await db()
+    .from('capital_injections')
+    .select('amount, created_at');
+  if (error || !data) return 0;
+  return (data as { amount: number; created_at: string }[])
+    .filter((r) => {
+      const t = new Date(r.created_at).getTime();
+      return t >= startMs && t < endMs;
+    })
+    .reduce((acc, cur) => acc + Number(cur.amount || 0), 0);
+}
+
+export async function saveDailyCashOpening(day: string, openingCash: number): Promise<DailyCashSummary> {
+  return saveDailyCashBook({
+    day,
+    openingCash,
+  });
+}
+
 /* ---------- karyawan (hanya owner; ditegakkan RPC + RLS) ---------- */
 export async function listStaff(): Promise<StaffMember[]> {
   const { data, error } = await db().rpc('list_staff');

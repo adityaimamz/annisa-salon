@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { deleteTransaction, getModalBulanLalu, loadTransactions, setModalBulanLalu, updateTransaction } from './api';
+import {
+  deleteTransaction, getDailyCashSummary, getModalBulanLalu, getPeriodModal,
+  loadTransactions, saveDailyCashOpening, setModalBulanLalu, updateTransaction,
+} from './api';
 import CapitalSheet from './CapitalSheet';
 import DateRange, { defaultRange } from './DateRange';
 import { dayKey, fmtDay, fmtTime, money, num, rp, startOfDay } from './format';
-import type { Item, PayMethod, Therapist, Tx } from './types';
+import type { DailyCashSummary, Item, PayMethod, Therapist, Tx } from './types';
 import { CloseBtn, ReceiptSheet, Select, Sheet, useConfirm, useToast } from './ui';
 
 type Sort = 'new' | 'old' | 'big' | 'small';
@@ -36,22 +39,89 @@ export default function TransaksiView({ refreshKey, therapists, items }: { refre
   const [sel, setSel] = useState<Tx | null>(null);
   const [editing, setEditing] = useState<Tx | null>(null);
   const [unitF, setUnitF] = useState<'all' | 'salon' | 'gbee'>('all');
-  const [modal, setModal] = useState<number>(148000);
+  const [modal, setModal] = useState<number>(0);
+  const [cashSummary, setCashSummary] = useState<DailyCashSummary | null>(null);
+  const [editModal, setEditModal] = useState(false);
+  const [modalInput, setModalInput] = useState('');
+  const [savingModal, setSavingModal] = useState(false);
   const [capitalOpen, setCapitalOpen] = useState(false);
+  const [modalRefreshKey, setModalRefreshKey] = useState(0);
 
   const today = startOfDay(new Date());
 
+  const isSingleDay = range === 'today' || range === 'yesterday' || (range === 'custom' && from && (!to || from === to));
+  const activeDay = useMemo(() => {
+    if (range === 'yesterday') {
+      const d = new Date(today);
+      d.setDate(d.getDate() - 1);
+      return dayKey(d);
+    }
+    if (range === 'custom' && from) return from;
+    return dayKey(today);
+  }, [range, from, today]);
+
+  const dateRangeMs = useMemo(() => {
+    const start = new Date(today), end = new Date(today);
+    end.setDate(end.getDate() + 1);
+    if (range === 'yesterday') { start.setDate(start.getDate() - 1); end.setDate(end.getDate() - 1); }
+    if (range === '7') start.setDate(start.getDate() - 6);
+    if (range === '30') start.setDate(start.getDate() - 29);
+    if (range === 'month') start.setDate(1);
+    if (range === 'lastmonth') {
+      end.setTime(new Date(today.getFullYear(), today.getMonth(), 1).getTime());
+      start.setTime(new Date(today.getFullYear(), today.getMonth() - 1, 1).getTime());
+    }
+    if (range === 'custom') {
+      start.setTime(from ? new Date(`${from}T00:00:00`).getTime() : 0);
+      end.setTime(to ? new Date(`${to}T00:00:00`).getTime() + 864e5 : end.getTime());
+    }
+    return { start: start.getTime(), end: end.getTime() };
+  }, [range, from, to, today]);
+
   useEffect(() => {
     let ignore = false;
-    getModalBulanLalu()
-      .then((val) => {
-        if (!ignore) {
-          setModal(val);
-        }
-      })
-      .catch((e) => console.error(e));
+    if (isSingleDay) {
+      getDailyCashSummary(activeDay)
+        .then((s) => {
+          if (!ignore) {
+            setCashSummary(s);
+            setModal(s.opening_cash);
+            setModalInput(money(s.opening_cash));
+            setEditModal(false);
+          }
+        })
+        .catch((e) => console.error(e));
+    } else {
+      setCashSummary(null);
+      getPeriodModal(dateRangeMs.start, dateRangeMs.end)
+        .then((val) => {
+          if (!ignore) {
+            setModal(val);
+            setEditModal(false);
+          }
+        })
+        .catch((e) => console.error(e));
+    }
     return () => { ignore = true; };
-  }, [refreshKey]);
+  }, [isSingleDay, activeDay, dateRangeMs, refreshKey, modalRefreshKey]);
+
+  async function handleSaveModal() {
+    if (savingModal || !isSingleDay) return;
+    const val = num(modalInput);
+    setSavingModal(true);
+    try {
+      const s = await saveDailyCashOpening(activeDay, val);
+      setCashSummary(s);
+      setModal(s.opening_cash);
+      setEditModal(false);
+      setModalRefreshKey((k) => k + 1);
+      toast(`Modal kas (${fmtDay(new Date(activeDay + 'T00:00:00'), { day: 'numeric', month: 'short' })}) diperbarui: ${rp(val)}`);
+    } catch (e) {
+      toast(`Gagal menyimpan modal: ${(e as Error).message}`, true);
+    } finally {
+      setSavingModal(false);
+    }
+  }
 
   async function remove(t: Tx) {
     if (!(await confirm({
@@ -134,6 +204,9 @@ export default function TransaksiView({ refreshKey, therapists, items }: { refre
   const sum = list.reduce((a, t) => a + t.total, 0);
   const sumSalon = list.reduce((a, t) => a + calcPortion(t).salon, 0);
   const sumGbee = list.reduce((a, t) => a + calcPortion(t).gbee, 0);
+  const sumTunai = list
+    .filter((t) => t.pay === 'Tunai')
+    .reduce((a, t) => a + (unitF === 'all' ? t.total : calcPortion(t)[unitF]), 0);
   const multi = range !== 'today' && range !== 'yesterday';
   const short = { day: 'numeric', month: 'short' } as const;
   let meta: string;
@@ -197,48 +270,106 @@ export default function TransaksiView({ refreshKey, therapists, items }: { refre
           </div>
           <div
             className="sum-modal"
-            style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', cursor: 'pointer' }}
-            onClick={() => setCapitalOpen(true)}
+            style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontWeight: 600 }}>💵 Modal Kas (M)</span>
-              <button
-                type="button"
-                className="linkbtn"
-                style={{ fontSize: 11.5, padding: '0 2px', fontWeight: 600 }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setCapitalOpen(true);
-                }}
-                title="Kelola & tambah modal kas"
-              >
-                + Kelola
-              </button>
+              {isSingleDay ? (
+                !editModal && (
+                  <button
+                    type="button"
+                    className="linkbtn"
+                    style={{ fontSize: 11.5, padding: '0 2px', fontWeight: 600 }}
+                    onClick={() => {
+                      setModalInput(money(modal));
+                      setEditModal(true);
+                    }}
+                    title="Ubah modal awal hari ini"
+                  >
+                    ✎ Ubah
+                  </button>
+                )
+              ) : (
+                <button
+                  type="button"
+                  className="linkbtn"
+                  style={{ fontSize: 11.5, padding: '0 2px', fontWeight: 600 }}
+                  onClick={() => setCapitalOpen(true)}
+                  title="Kelola & tambah suntikan modal"
+                >
+                  + Kelola
+                </button>
+              )}
             </div>
-            <div>
-              <b style={{ fontVariantNumeric: 'tabular-nums' }}>{rp(modal)}</b>
-              <span style={{ display: 'block', fontSize: 11.5, color: 'var(--ink-3)', marginTop: 2 }}>
-                Modal awal &amp; suntikan dana
-              </span>
-            </div>
-            <div style={{
-              fontSize: 11.5,
-              color: 'var(--green, #1F8A5B)',
-              marginTop: 4,
-              borderTop: '1px dashed var(--line)',
-              paddingTop: 3,
-              fontWeight: 600,
-            }}>
-              + Tambah modal / rincian →
+
+            {editModal ? (
+              <div style={{ marginTop: 4, display: 'flex', gap: 4, alignItems: 'center' }}>
+                <label className="money" style={{ flex: 1, minWidth: 0, margin: 0 }}>
+                  <span style={{ fontSize: 11 }}>Rp</span>
+                  <input
+                    className="input"
+                    inputMode="numeric"
+                    autoFocus
+                    style={{ height: 28, fontSize: 13, padding: '2px 4px', fontWeight: 600, textAlign: 'right' }}
+                    value={money(num(modalInput))}
+                    onChange={(e) => setModalInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveModal();
+                      if (e.key === 'Escape') setEditModal(false);
+                    }}
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="btn btn-green btn-sm"
+                  style={{ padding: '2px 8px', height: 28, fontSize: 11 }}
+                  onClick={handleSaveModal}
+                  disabled={savingModal}
+                >
+                  {savingModal ? '…' : 'Simpan'}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-line btn-sm"
+                  style={{ padding: '2px 6px', height: 28, fontSize: 11 }}
+                  onClick={() => setEditModal(false)}
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <div>
+                <b style={{ fontVariantNumeric: 'tabular-nums' }}>{rp(modal)}</b>
+                <span style={{ display: 'block', fontSize: 11.5, color: 'var(--ink-3)', marginTop: 2 }}>
+                  {isSingleDay ? 'Sisa kas kemarin / kas awal' : 'Suntikan modal di periode ini'}
+                </span>
+              </div>
+            )}
+
+            <div
+              style={{
+                fontSize: 11.5,
+                color: 'var(--green, #1F8A5B)',
+                marginTop: 4,
+                borderTop: '1px dashed var(--line)',
+                paddingTop: 3,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+              onClick={() => setCapitalOpen(true)}
+            >
+              + Suntikan modal &amp; rincian →
             </div>
           </div>
           <div>
             <span>💰 Total Kas Masuk</span>
             <b style={{ color: 'var(--green, #1F8A5B)', fontVariantNumeric: 'tabular-nums' }}>
-              {rp(sum + (unitF !== 'gbee' ? modal : 0))}
+              {rp((isSingleDay ? sumTunai : sum) + (unitF !== 'gbee' ? modal : 0))}
             </b>
             <span style={{ display: 'block', fontSize: 11.5, color: 'var(--ink-3)', marginTop: 2 }}>
-              Pemasukan + Modal (M)
+              {isSingleDay
+                ? (cashSummary ? `Sisa kas laci: ${rp(cashSummary.expected_cash)}` : 'Pemasukan tunai + Modal')
+                : 'Pemasukan + Modal (M)'}
             </span>
           </div>
         </div>
@@ -276,7 +407,7 @@ export default function TransaksiView({ refreshKey, therapists, items }: { refre
       <EditSheet tx={editing} therapists={therapists} items={items} onClose={() => setEditing(null)}
         onSaved={(t) => { setAll((cur) => (cur ?? []).map((x) => (x.id === t.id ? t : x))); setSel(t); toast('Transaksi diperbarui'); }} />
       <CapitalSheet open={capitalOpen} onClose={() => setCapitalOpen(false)}
-        onSaved={() => getModalBulanLalu().then(setModal)} />
+        onSaved={() => setModalRefreshKey((k) => k + 1)} />
     </section>
   );
 }
