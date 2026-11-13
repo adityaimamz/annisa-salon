@@ -3,11 +3,11 @@ import { createTransaction, loadMembers } from './api';
 import { MemberPicker, MemberTags } from './MemberKit';
 import { MEMBER_GOAL, fmtDate, memberStat } from './member';
 import { enqueue, isNetworkError } from './offline';
-import { money, num, rp, rpk } from './format';
+import { dayKey, money, num, rp, rpk } from './format';
 import type { CartLine, Category, Item, Member, PayMethod, Profile, Therapist, Tx } from './types';
 import { CloseBtn, Icon, ReceiptSheet, Select, Sheet, useToast } from './ui';
 
-const eff = (l: CartLine) => (l.free ? 0 : l.price);
+const eff = (l: CartLine, reseller = false) => (l.free ? 0 : reseller && l.resell ? l.resell : l.price);
 
 const priceLabel = (it: Item) => {
   if (it.price) return rp(it.price);
@@ -45,7 +45,8 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
   const [members, setMembers] = useState<Member[]>([]);
   const [memberId, setMemberId] = useState<number | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [backdate, setBackdate] = useState(false); // owner: catat sebagai transaksi kemarin
+  const [reseller, setReseller] = useState(false); // pelanggan reseller: produk memakai harga reseller
+  const [txDate, setTxDate] = useState(''); // owner: tanggal transaksi (kosong = hari ini)
   const isOwner = profile.role === 'owner';
 
   const refreshMembers = useCallback(async () => {
@@ -65,12 +66,12 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
   const groups: [Category | null, Item[]][] =
     cat === 'all' && !q ? cats.map((c) => [c, list.filter((i) => i.cat === c.id)]) : [[null, list]];
 
-  const sub = cart.reduce((a, l) => a + eff(l) * l.qty, 0);
+  const sub = cart.reduce((a, l) => a + eff(l, reseller) * l.qty, 0);
   const discount = discMode === 'pct'
     ? Math.round((sub * Math.min(num(disc), 100)) / 100)
     : Math.min(num(disc), sub);
   const total = sub - discount;
-  const subSalon = cart.filter((l) => (l.unit ?? (l.cat === 'produk' ? 'gbee' : 'salon')) === 'salon').reduce((a, l) => a + eff(l) * l.qty, 0);
+  const subSalon = cart.filter((l) => (l.unit ?? (l.cat === 'produk' ? 'gbee' : 'salon')) === 'salon').reduce((a, l) => a + eff(l, reseller) * l.qty, 0);
   const subGbee = sub - subSalon;
   const discSalon = sub ? Math.round((discount * subSalon) / sub) : 0;
   const totSalon = Math.max(0, subSalon - discSalon);
@@ -94,7 +95,7 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
     setCart((c) => {
       const ex = c.find((l) => l.key === key);
       if (ex && !it.service) return c.map((l) => (l === ex ? { ...l, qty: l.qty + 1 } : l));
-      return [...c, { key, id: it.id, cat: it.cat, name, price, qty: 1, unit, terapis: '', service: it.service }];
+      return [...c, { key, id: it.id, cat: it.cat, name, price, qty: 1, unit, terapis: '', service: it.service, resell: it.variants?.length ? undefined : it.resellPrice }];
     });
     toast(`${name} ditambahkan`);
   }
@@ -138,10 +139,19 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
     if (!ok || paying) return;
     setPaying(true);
     const clientId = crypto.randomUUID();
-    // Kemarin: jam sekarang tetapi tanggal mundur satu hari (urutan struk tetap wajar)
-    const createdAt = isOwner && backdate ? new Date().setDate(new Date().getDate() - 1) : Date.now();
+    // Tanggal lain: jam sekarang di tanggal pilihan (urutan struk tetap wajar)
+    let createdAt = Date.now();
+    if (isOwner && txDate && txDate !== dayKey(createdAt)) {
+      const [Y, M, D] = txDate.split('-').map(Number);
+      const n = new Date();
+      createdAt = Math.min(new Date(Y, M - 1, D, n.getHours(), n.getMinutes(), n.getSeconds()).getTime(), createdAt);
+    }
     const memberFree = hasFree && !!member;
-    const payLines = cart.map((l) => (l.free && member ? { ...l, price: 0, name: `${l.name} (Gratis member)` } : l));
+    const payLines = cart.map((l) => {
+      if (l.free && member) return { ...l, price: 0, name: `${l.name} (Gratis member)` };
+      if (reseller && l.resell) return { ...l, price: l.resell, name: `${l.name} (Harga reseller)` };
+      return l;
+    });
     const input = {
       customer: cust.trim(), wa: wa.trim(), discount, pay, cash: pay === 'Tunai' ? cash : 0,
       lines: payLines, cashierName: profile.name, clientId, createdAt,
@@ -153,7 +163,7 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
     }));
     const reset = () => {
       setCart([]); setCust(''); setWa(''); setMemberId(null); setDisc(''); setDiscMode('rp'); setCashIn(''); setPay('Tunai');
-      setCartOpen(false); setBackdate(false);
+      setCartOpen(false); setTxDate(''); setReseller(false);
     };
     try {
       let tx: Tx;
@@ -240,6 +250,11 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
               <input className="input" placeholder="Nama pelanggan" aria-label="Nama pelanggan" value={cust} onChange={(e) => setCust(e.target.value)} />
               <input className="input" placeholder="No. WA (opsional)" inputMode="tel" aria-label="Nomor WhatsApp pelanggan" value={wa} onChange={(e) => setWa(e.target.value)} />
             </div>
+            <div className="rowx" style={{ margin: '8px 0' }}><span>Jenis pelanggan</span>
+              <span className="seg seg-sm" role="group" aria-label="Jenis pelanggan">
+                <button type="button" aria-pressed={!reseller} onClick={() => setReseller(false)}>Biasa</button>
+                <button type="button" aria-pressed={reseller} onClick={() => setReseller(true)}>Reseller</button>
+              </span></div>
             {member && mstat ? (
               <div className="mem-chip">
                 <div>
@@ -256,8 +271,8 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
             {cart.length ? cart.map((l, i) => (
               <div className="line" key={l.key + i}>
                 <div className="line-top">
-                  <span className="n">{l.name}</span><span className="amt">{l.free ? 'Gratis' : rp(l.price * l.qty)}</span>
-                  <span className="v">{l.free ? 'Gratis member' : rp(l.price) + (l.qty > 1 ? ' × ' + l.qty : '')}</span>
+                  <span className="n">{l.name}</span><span className="amt">{l.free ? 'Gratis' : rp(eff(l, reseller) * l.qty)}</span>
+                  <span className="v">{l.free ? 'Gratis member' : rp(eff(l, reseller)) + (reseller && l.resell ? ' · reseller' : '') + (l.qty > 1 ? ' × ' + l.qty : '')}</span>
                 </div>
                 <div className="line-bot">
                   {l.service ? (
@@ -304,11 +319,10 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
               </div>
             )}
             {isOwner && (
-              <div className="rowx"><span>Tanggal transaksi</span>
-                <span className="seg seg-sm" role="group" aria-label="Tanggal transaksi">
-                  <button type="button" aria-pressed={!backdate} onClick={() => setBackdate(false)}>Hari ini</button>
-                  <button type="button" aria-pressed={backdate} onClick={() => setBackdate(true)}>Kemarin</button>
-                </span></div>
+              <div className="rowx"><label htmlFor="txDate">Tanggal transaksi</label>
+                <input className="input disc" id="txDate" type="date" style={{ width: 'auto' }}
+                  min={dayKey(Date.now() - 14 * 864e5)} max={dayKey(Date.now())}
+                  value={txDate || dayKey(Date.now())} onChange={(e) => setTxDate(e.target.value)} /></div>
             )}
             <div className="pay" role="radiogroup" aria-label="Metode bayar">
               {(['Tunai', 'QRIS', 'Transfer'] as PayMethod[]).map((m) => (

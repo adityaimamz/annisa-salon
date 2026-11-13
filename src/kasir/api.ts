@@ -167,17 +167,29 @@ const toRow = (it: Item): ItemRow => ({
 });
 
 export async function loadCatalog(): Promise<{ cats: Category[]; items: Item[] }> {
-  const [c, i] = await Promise.all([
+  const [c, i, r] = await Promise.all([
     db().from('categories').select('id,name').order('sort'),
     db().from('catalog_items').select('*').order('sort'),
+    db().from('item_reseller_prices').select('item_id,price'),
   ]);
   fail(c.error); fail(i.error);
-  return { cats: c.data as Category[], items: (i.data as ItemRow[]).map(fromRow) };
+  // harga reseller opsional: kegagalan memuatnya tidak boleh menghalangi Kasir
+  const resell = new Map((r.error ? [] : r.data ?? []).map((x) => [x.item_id as string, x.price as number]));
+  return {
+    cats: c.data as Category[],
+    items: (i.data as ItemRow[]).map(fromRow).map((it) => ({ ...it, resellPrice: resell.get(it.id) })),
+  };
 }
 
 export async function saveItem(it: Item) {
   const { error } = await db().from('catalog_items').upsert(toRow(it));
   fail(error);
+  if (it.cat !== 'produk') return;
+  const rp = it.resellPrice;
+  const { error: e2 } = rp
+    ? await db().from('item_reseller_prices').upsert({ item_id: it.id, price: rp, updated_at: new Date().toISOString() })
+    : await db().from('item_reseller_prices').delete().eq('item_id', it.id);
+  fail(e2);
 }
 
 export async function deleteItem(id: string) {

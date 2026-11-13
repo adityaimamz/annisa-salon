@@ -59,7 +59,7 @@ export default function HargaView({ cats, items, onSave, onDelete, readOnly = fa
               : kind === 'layanan'
               ? 'Harga layanan dipakai di Kasir dan tampil di daftar layanan website.'
               : kind === 'stok'
-              ? 'Stok produk Gbee dan harga reseller (modal). Penjualan di Kasir mengurangi stok otomatis.'
+              ? 'Stok produk Gbee dan harga beli (modal). Penjualan di Kasir mengurangi stok otomatis.'
               : 'Harga Kasir dan harga website produk diatur terpisah. Produk muncul di landing dan halaman Produk.'}
           </p></div>
         {!readOnly && kind !== 'stok' && (
@@ -193,6 +193,7 @@ function ItemEditor({ target, kind, cats, defaultCat, nextSort, onClose, onSave,
   const [mode, setMode] = useState<'single' | 'multi'>('single');
   const [price, setPrice] = useState('');
   const [webPrice, setWebPrice] = useState('');
+  const [resellPrice, setResellPrice] = useState('');
   const [vlabel, setVlabel] = useState('');
   const [vars, setVars] = useState<[string, string][]>([['', ''], ['', '']]);
   const [errs, setErrs] = useState({ name: false, price: false, vars: false });
@@ -204,6 +205,7 @@ function ItemEditor({ target, kind, cats, defaultCat, nextSort, onClose, onSave,
     setUnit(it?.unit ?? (kind === 'produk' || it?.cat === 'produk' ? 'gbee' : 'salon'));
     setMode(it?.variants ? 'multi' : 'single'); setPrice(it?.price ? money(it.price) : '');
     setWebPrice(it?.webPrice ? money(it.webPrice) : '');
+    setResellPrice(it?.resellPrice ? money(it.resellPrice) : '');
     setVlabel(it?.vlabel ?? '');
     setVars(it?.variants ? it.variants.map(([n, p]) => [n, money(p)]) : [['', ''], ['', '']]);
     setErrs({ name: false, price: false, vars: false });
@@ -230,7 +232,8 @@ function ItemEditor({ target, kind, cats, defaultCat, nextSort, onClose, onSave,
       off: it?.off ?? false, sort: it?.sort ?? nextSort,
     };
     const next: Item = mode === 'single'
-      ? { ...base, price: p, webPrice: catId === 'produk' && num(webPrice) ? num(webPrice) : undefined }
+      ? { ...base, price: p, webPrice: catId === 'produk' && num(webPrice) ? num(webPrice) : undefined,
+        resellPrice: catId === 'produk' && num(resellPrice) ? num(resellPrice) : undefined }
       : { ...base, variants: vs, vlabel: vlabel.trim() || 'Pilihan', opts: it?.opts };
     setBusy(true);
     try { await onSave(next, !it); onClose(); }
@@ -304,6 +307,13 @@ function ItemEditor({ target, kind, cats, defaultCat, nextSort, onClose, onSave,
             <label htmlFor="fWeb">Harga di website <span className="opt">(kosong = ikut harga kasir)</span></label>
             <label className="money"><span>Rp</span>
               <input className="input" id="fWeb" inputMode="numeric" placeholder="0" value={webPrice} onChange={(e) => setWebPrice(money(num(e.target.value)))} /></label>
+          </div>
+        ) : null}
+        {mode === 'single' && catId === 'produk' ? (
+          <div className="field">
+            <label htmlFor="fResell">Harga jual ke reseller <span className="opt">(kosong = tidak ada harga reseller · tidak tampil di website)</span></label>
+            <label className="money"><span>Rp</span>
+              <input className="input" id="fResell" inputMode="numeric" placeholder="0" value={resellPrice} onChange={(e) => setResellPrice(money(num(e.target.value)))} /></label>
           </div>
         ) : null}
         {mode === 'single' ? null : (

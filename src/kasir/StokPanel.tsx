@@ -40,7 +40,7 @@ export default function StokPanel({ items }: Readonly<{ items: Item[] }>) {
     try {
       await setResellerPrice(it.id, v);
       setCosts((c) => ({ ...c, [it.id]: { price: v, source: c[it.id]?.source ?? '' } }));
-      toast(`Harga reseller ${it.name} jadi ${rp(v)}`);
+      toast(`Harga beli ${it.name} jadi ${rp(v)}`);
     } catch (e) { toast(`Gagal menyimpan: ${(e as Error).message}`, true); }
   }
 
@@ -83,8 +83,8 @@ export default function StokPanel({ items }: Readonly<{ items: Item[] }>) {
                       {tracked ? <><b>{sisa}</b><small>sisa</small></> : <small>Belum dicatat</small>}
                     </button>
                     <div className="stk-jual"><small>Harga jual</small><b>{rp(it.price ?? 0)}</b></div>
-                    <div className="stk-cost"><small>Harga reseller</small>
-                      <MoneyInput value={costs[it.id]?.price ?? 0} label={`reseller ${it.name}`} onCommit={(v) => saveCost(it, v)} /></div>
+                    <div className="stk-cost"><small>Harga beli (modal)</small>
+                      <MoneyInput value={costs[it.id]?.price ?? 0} label={`harga beli ${it.name}`} onCommit={(v) => saveCost(it, v)} /></div>
                   </div>
                 );
               })}
@@ -161,13 +161,13 @@ function StockForm({ mode, items, costs, levels, onClose, onSaved }: Readonly<{
         <h3 id="stkTitle">{isAwal ? 'Isi stok awal' : 'Stok masuk'}</h3>
         <p className="sub2">{isAwal
           ? 'Ketik jumlah stok yang ada sekarang. Produk yang tidak diisi dilewati.'
-          : 'Ketik jumlah di produk yang masuk. Harga reseller terisi otomatis dan boleh diubah.'}</p>
+          : 'Ketik jumlah di produk yang masuk. Harga beli (modal) terisi otomatis dan boleh diubah.'}</p>
 
         <div className={`field row2`} style={{ marginTop: 16 }}>
           <div><label htmlFor="stkDate">{isAwal ? 'Stok dihitung tanggal' : 'Tanggal masuk'}</label>
             <input className="input" id="stkDate" type="date" max={today} value={date} onChange={(e) => setDate(e.target.value || today)} /></div>
           {!isAwal && (
-            <div><label htmlFor="stkSrc">Sumber reseller <span className="opt">(opsional)</span></label>
+            <div><label htmlFor="stkSrc">Beli dari <span className="opt">(opsional)</span></label>
               <input className="input" id="stkSrc" list="stkSrcList" placeholder="Nama sumber" value={source} onChange={(e) => setSource(e.target.value)} />
               <datalist id="stkSrcList">{sources.map((s) => <option key={s} value={s} />)}</datalist></div>
           )}
@@ -177,7 +177,7 @@ function StockForm({ mode, items, costs, levels, onClose, onSaved }: Readonly<{
           {Icon.search()}
           <input className="input" type="search" placeholder="Cari produk…" autoComplete="off" aria-label="Cari produk" value={q} onChange={(e) => setQ(e.target.value)} />
         </label>
-        <div className={`stk-form-head${isAwal ? ' awal' : ''}`}><span>Produk</span><span>Jumlah</span>{!isAwal && <span>Harga reseller</span>}</div>
+        <div className={`stk-form-head${isAwal ? ' awal' : ''}`}><span>Produk</span><span>Jumlah</span>{!isAwal && <span>Harga beli (modal)</span>}</div>
         <div className="stk-rows">
           {shown.map((it) => {
             const has = levels[it.id] !== undefined;
@@ -192,7 +192,7 @@ function StockForm({ mode, items, costs, levels, onClose, onSaved }: Readonly<{
                   onChange={(e) => setQtys((c) => ({ ...c, [it.id]: e.target.value.replace(/\D/g, '') }))} />
                 {!isAwal && (
                   <label className="money"><span>Rp</span>
-                    <input className="input" inputMode="numeric" placeholder="0" aria-label={`Harga reseller ${it.name}`}
+                    <input className="input" inputMode="numeric" placeholder="0" aria-label={`Harga beli ${it.name}`}
                       value={costIn[it.id] === undefined ? money(costs[it.id]?.price ?? 0) : money(num(costIn[it.id]))}
                       onFocus={(e) => e.target.select()}
                       onChange={(e) => setCostIn((c) => ({ ...c, [it.id]: e.target.value }))} /></label>

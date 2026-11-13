@@ -32,6 +32,7 @@ export interface Item {
   unit?: BusinessUnit;
   price?: number; // harga kasir
   webPrice?: number; // harga produk di website (landing & /produk); kosong = ikut harga kasir. Layanan selalu memakai `price`.
+  resellPrice?: number; // harga jual ke pelanggan reseller (hanya produk; tidak pernah tampil di website)
   desc?: string; // deskripsi layanan di website
   vlabel?: string;
   variants?: Variant[];
@@ -121,6 +122,7 @@ export interface CartLine {
   terapis: string; // id terapis sebagai string, '' = belum dipilih
   service: boolean;
   free?: boolean; // treatment gratis member (harga efektif Rp0, qty 1)
+  resell?: number; // harga reseller produk ini (bila ada); dipakai kalau pelanggan = reseller
 }
 
 export const EXP_CATS = ['Belanja bahan', 'Stok produk', 'Gaji', 'Listrik & air', 'Sewa', 'Lainnya'];
