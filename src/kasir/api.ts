@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 import type {
-  BusinessUnit, CapitalInjection, CartLine, Category, DailyCashLog, DailyCashSummary, Expense, Item, ItemCost, PayMethod, Photo, Profile, StaffMember, StockEntry, StockKind, StockMonthRow, Therapist, Tx, TxLine,
+  BusinessUnit, CapitalInjection, CartLine, Category, DailyCashLog, DailyCashSummary, Expense, Item, ItemCost, Member, MemberVisit, PayMethod, Photo, Profile, StaffMember, StockEntry, StockKind, StockMonthRow, Therapist, Tx, TxLine,
 } from './types';
 
 function db() {
@@ -11,6 +11,59 @@ function db() {
 const fail = (e: { message: string } | null) => {
   if (e) throw new Error(e.message);
 };
+
+/* ---------- member salon ---------- */
+interface MemberRow {
+  id: number; name: string; wa: string | null; joined_on: string; expires_on: string; note: string | null;
+  member_visits?: { kind: 'stamp' | 'free' }[];
+}
+const memberFromRow = (r: MemberRow): Member => ({
+  id: r.id, name: r.name, wa: r.wa ?? '', joinedOn: r.joined_on, expiresOn: r.expires_on, note: r.note ?? '',
+  stamps: (r.member_visits ?? []).filter((v) => v.kind === 'stamp').length,
+  freeUsed: (r.member_visits ?? []).filter((v) => v.kind === 'free').length,
+});
+
+export async function loadMembers(): Promise<Member[]> {
+  const { data, error } = await db().from('members')
+    .select('id,name,wa,joined_on,expires_on,note,member_visits(kind)').order('name').limit(2000);
+  fail(error);
+  return (data as unknown as MemberRow[]).map(memberFromRow);
+}
+
+export async function createMember(name: string, wa: string): Promise<Member> {
+  const { data, error } = await db().rpc('create_member', { p_name: name, p_wa: wa || null, p_joined: null });
+  fail(error);
+  return memberFromRow(data as MemberRow);
+}
+
+export async function loadMemberVisits(memberId: number): Promise<MemberVisit[]> {
+  const { data, error } = await db().from('member_visits')
+    .select('id,kind,treatments,visited_at,transaction_id').eq('member_id', memberId)
+    .order('visited_at', { ascending: false });
+  fail(error);
+  return (data ?? []).map((r) => ({
+    id: r.id, kind: r.kind, treatments: r.treatments ?? '', at: Date.parse(r.visited_at), txId: r.transaction_id,
+  }));
+}
+
+export async function addMemberVisit(memberId: number, kind: 'stamp' | 'free', treatments: string, at?: number) {
+  const { error } = await db().rpc('add_member_visit', {
+    p_member_id: memberId, p_kind: kind, p_treatments: treatments || null, p_at: at ? new Date(at).toISOString() : null,
+  });
+  fail(error);
+}
+
+export async function deleteMemberVisit(id: number) {
+  const { data, error } = await db().from('member_visits').delete().eq('id', id).select('id');
+  fail(error);
+  if (!data?.length) throw new Error('Catatan tidak ditemukan atau Anda tidak berhak menghapusnya.');
+}
+
+export async function deleteMember(id: number) {
+  const { data, error } = await db().from('members').delete().eq('id', id).select('id');
+  fail(error);
+  if (!data?.length) throw new Error('Member tidak ditemukan atau Anda tidak berhak menghapusnya.');
+}
 
 /* ---------- stok produk (Gbee) ---------- */
 /** Sisa stok per produk. Produk yang belum punya catatan stok tidak ada di hasil. */
@@ -247,6 +300,7 @@ export interface PayInput {
   customer: string; wa: string; discount: number; pay: PayMethod; cash: number;
   lines: CartLine[]; cashierName: string;
   clientId?: string; createdAt?: number; // transaksi offline: id unik + waktu bayar asli
+  memberId?: number; memberFree?: boolean; // member: cap otomatis, atau treatment gratis
 }
 
 export async function createTransaction(p: PayInput): Promise<Tx> {
@@ -258,6 +312,8 @@ export async function createTransaction(p: PayInput): Promise<Tx> {
     p_cash: p.cash,
     p_client_id: p.clientId ?? null,
     p_created_at: p.createdAt ? new Date(p.createdAt).toISOString() : null,
+    p_member_id: p.memberId ?? null,
+    p_member_free: p.memberFree ?? false,
     p_items: p.lines.map((l) => ({
       catalog_item_id: l.id, category_id: l.cat, name: l.name, price: l.price, qty: l.qty,
       business_unit: l.unit ?? (l.cat === 'produk' ? 'gbee' : 'salon'),

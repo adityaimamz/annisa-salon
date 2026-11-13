@@ -8,6 +8,7 @@ import HargaView from './HargaView';
 import KaryawanView from './KaryawanView';
 import KasirView from './KasirView';
 import KeuanganView from './KeuanganView';
+import MemberView from './MemberView';
 import Login from './Login';
 import PengeluaranView from './PengeluaranView';
 import { cacheGet, cacheSet, dequeue, enqueue, isNetworkError, listQueue } from './offline';
@@ -17,11 +18,12 @@ import type { Category, Item, Profile, Therapist } from './types';
 import { ConfirmProvider, Icon, ToastProvider, useToast } from './ui';
 import { supabase, supabaseReady } from '../lib/supabase';
 
-type View = 'kasir' | 'transaksi' | 'keuangan' | 'katalog' | 'pengaturan';
+type View = 'kasir' | 'transaksi' | 'keuangan' | 'member' | 'katalog' | 'pengaturan';
 const NAV: { id: View; label: string; icon: (s?: number) => React.ReactNode; ownerOnly?: boolean }[] = [
   { id: 'kasir', label: 'Kasir', icon: Icon.kasir },
   { id: 'transaksi', label: 'Transaksi', icon: Icon.transaksi, ownerOnly: true },
   { id: 'keuangan', label: 'Keuangan', icon: Icon.keuangan, ownerOnly: true },
+  { id: 'member', label: 'Member', icon: Icon.member, ownerOnly: true },
   { id: 'katalog', label: 'Katalog', icon: Icon.harga },
   { id: 'pengaturan', label: 'Pengaturan', icon: Icon.pengaturan, ownerOnly: true },
 ];
@@ -199,6 +201,7 @@ function Shell({ userId }: { userId: string }) {
               : <PengeluaranView refreshKey={refreshKey} />}
           </TabbedView>
         )}
+        {current === 'member' && <MemberView refreshKey={refreshKey} />}
         {current === 'katalog' && <HargaView cats={cats} items={items} onSave={save} onDelete={remove} readOnly={!isOwner} />}
         {current === 'pengaturan' && (
           <TabbedView label="Pengaturan" value={setTab} onChange={setSetTab}

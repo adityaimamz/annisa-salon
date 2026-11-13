@@ -1,9 +1,13 @@
-import { useMemo, useState } from 'react';
-import { createTransaction } from './api';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createTransaction, loadMembers } from './api';
+import { MemberPicker, MemberTags } from './MemberKit';
+import { MEMBER_GOAL, fmtDate, memberStat } from './member';
 import { enqueue, isNetworkError } from './offline';
 import { money, num, rp, rpk } from './format';
-import type { CartLine, Category, Item, PayMethod, Profile, Therapist, Tx } from './types';
+import type { CartLine, Category, Item, Member, PayMethod, Profile, Therapist, Tx } from './types';
 import { CloseBtn, Icon, ReceiptSheet, Select, Sheet, useToast } from './ui';
+
+const eff = (l: CartLine) => (l.free ? 0 : l.price);
 
 const priceLabel = (it: Item) => {
   if (it.price) return rp(it.price);
@@ -38,6 +42,16 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
   const [opt, setOpt] = useState('');
   const [receipt, setReceipt] = useState<Tx | null>(null);
   const [paying, setPaying] = useState(false);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [memberId, setMemberId] = useState<number | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  const refreshMembers = useCallback(async () => {
+    try { const m = await loadMembers(); setMembers(m); return m; } catch { return null; }
+  }, []);
+  useEffect(() => { void refreshMembers(); }, [refreshMembers]);
+  const member = members.find((m) => m.id === memberId) ?? null;
+  const mstat = member ? memberStat(member) : null;
 
   const q = query.trim().toLowerCase();
   const list = useMemo(
@@ -49,12 +63,12 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
   const groups: [Category | null, Item[]][] =
     cat === 'all' && !q ? cats.map((c) => [c, list.filter((i) => i.cat === c.id)]) : [[null, list]];
 
-  const sub = cart.reduce((a, l) => a + l.price * l.qty, 0);
+  const sub = cart.reduce((a, l) => a + eff(l) * l.qty, 0);
   const discount = discMode === 'pct'
     ? Math.round((sub * Math.min(num(disc), 100)) / 100)
     : Math.min(num(disc), sub);
   const total = sub - discount;
-  const subSalon = cart.filter((l) => (l.unit ?? (l.cat === 'produk' ? 'gbee' : 'salon')) === 'salon').reduce((a, l) => a + l.price * l.qty, 0);
+  const subSalon = cart.filter((l) => (l.unit ?? (l.cat === 'produk' ? 'gbee' : 'salon')) === 'salon').reduce((a, l) => a + eff(l) * l.qty, 0);
   const subGbee = sub - subSalon;
   const discSalon = sub ? Math.round((discount * subSalon) / sub) : 0;
   const totSalon = Math.max(0, subSalon - discSalon);
@@ -99,23 +113,43 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
   }
 
   const step = (i: number, d: number) =>
-    setCart((c) => c.flatMap((l, idx) => (idx !== i ? [l] : l.qty + d < 1 ? [] : [{ ...l, qty: l.qty + d }])));
+    setCart((c) => c.flatMap((l, idx) => (idx !== i ? [l] : l.qty + d < 1 ? [] : [{ ...l, qty: l.qty + d, free: l.free && l.qty + d === 1 }])));
+
+  const hasService = cart.some((l) => l.service);
+  const hasFree = cart.some((l) => l.free);
+  const toggleFree = (i: number) =>
+    setCart((c) => c.map((l, idx) => ({ ...l, free: idx === i ? !l.free : false })));
+
+  function pickMember(m: Member) {
+    if (memberStat(m).expired) { toast(`Member ${m.name} sudah kedaluwarsa. Daftarkan sebagai member baru.`, true); return; }
+    setMemberId(m.id); setPickerOpen(false);
+    setCust(m.name); if (m.wa) setWa(m.wa);
+    setMembers((cur) => (cur.some((x) => x.id === m.id) ? cur : [...cur, m]));
+    void refreshMembers();
+  }
+  function clearMember() {
+    setMemberId(null);
+    setCart((c) => c.map((l) => ({ ...l, free: false })));
+  }
 
   async function doPay() {
     if (!ok || paying) return;
     setPaying(true);
     const clientId = crypto.randomUUID();
     const createdAt = Date.now();
+    const memberFree = hasFree && !!member;
+    const payLines = cart.map((l) => (l.free && member ? { ...l, price: 0, name: `${l.name} (Gratis member)` } : l));
     const input = {
       customer: cust.trim(), wa: wa.trim(), discount, pay, cash: pay === 'Tunai' ? cash : 0,
-      lines: cart, cashierName: profile.name, clientId, createdAt,
+      lines: payLines, cashierName: profile.name, clientId, createdAt,
+      memberId: member?.id, memberFree,
     };
-    const lines = cart.map((l) => ({
+    const lines = payLines.map((l) => ({
       id: l.id, cat: l.cat, name: l.name, price: l.price, qty: l.qty,
       terapis: therapists.find((t) => String(t.id) === l.terapis)?.name ?? null,
     }));
     const reset = () => {
-      setCart([]); setCust(''); setWa(''); setDisc(''); setDiscMode('rp'); setCashIn(''); setPay('Tunai');
+      setCart([]); setCust(''); setWa(''); setMemberId(null); setDisc(''); setDiscMode('rp'); setCashIn(''); setPay('Tunai');
       setCartOpen(false);
     };
     try {
@@ -134,9 +168,16 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
         onQueued();
       }
       tx.lines = lines;
+      const paidMember = member;
       reset();
       setReceipt(tx);
       onPaid();
+      if (paidMember && tx.id !== -1 && (hasService || memberFree)) {
+        void refreshMembers().then((list) => {
+          const m = list?.find((x) => x.id === paidMember.id);
+          if (m) toast(memberFree ? `Treatment gratis ${m.name} tercatat` : `Cap ${m.name}: ${memberStat(m).cycle}/${MEMBER_GOAL}`);
+        });
+      }
     } catch (e) {
       toast(`Gagal menyimpan transaksi: ${(e as Error).message}`, true);
     } finally {
@@ -196,11 +237,24 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
               <input className="input" placeholder="Nama pelanggan" aria-label="Nama pelanggan" value={cust} onChange={(e) => setCust(e.target.value)} />
               <input className="input" placeholder="No. WA (opsional)" inputMode="tel" aria-label="Nomor WhatsApp pelanggan" value={wa} onChange={(e) => setWa(e.target.value)} />
             </div>
+            {member && mstat ? (
+              <div className="mem-chip">
+                <div>
+                  <b>{member.name}</b> <MemberTags m={member} />
+                  <small>Cap {mstat.cycle}/{MEMBER_GOAL} · berlaku s.d. {fmtDate(member.expiresOn)}</small>
+                  {hasFree ? <small className="mem-note">Treatment gratis dipakai, cap tidak bertambah.</small>
+                    : hasService ? <small className="mem-note">+1 cap setelah dibayar.</small> : null}
+                </div>
+                <button className="icon-btn" type="button" aria-label="Lepas member" onClick={clearMember}>{Icon.close()}</button>
+              </div>
+            ) : (
+              <button className="linkbtn mem-add" type="button" onClick={() => setPickerOpen(true)}>+ Member</button>
+            )}
             {cart.length ? cart.map((l, i) => (
               <div className="line" key={l.key + i}>
                 <div className="line-top">
-                  <span className="n">{l.name}</span><span className="amt">{rp(l.price * l.qty)}</span>
-                  <span className="v">{rp(l.price)}{l.qty > 1 ? ' × ' + l.qty : ''}</span>
+                  <span className="n">{l.name}</span><span className="amt">{l.free ? 'Gratis' : rp(l.price * l.qty)}</span>
+                  <span className="v">{l.free ? 'Gratis member' : rp(l.price) + (l.qty > 1 ? ' × ' + l.qty : '')}</span>
                 </div>
                 <div className="line-bot">
                   {l.service ? (
@@ -209,6 +263,11 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
                       onChange={(v) => setCart((c) => c.map((x, idx) => (idx === i ? { ...x, terapis: v } : x)))}
                       options={therapists.map((t) => ({ value: String(t.id), label: t.name }))} />
                   ) : <span className="v">Produk</span>}
+                  {l.service && mstat && mstat.available > 0 && l.qty === 1 && (
+                    <button type="button" className="free-btn" aria-pressed={!!l.free} onClick={() => toggleFree(i)}>
+                      {l.free ? '✓ Gratis' : 'Pakai gratis'}
+                    </button>
+                  )}
                   <span className="mini-step">
                     <button type="button" aria-label="Kurangi" onClick={() => step(i, -1)}>−</button>
                     <span className="qty" key={l.qty}>{l.qty}</span>
@@ -306,6 +365,8 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
         )}
       </Sheet>
 
+      <MemberPicker open={pickerOpen} members={members} defaultName={cust} defaultWa={wa}
+        onClose={() => setPickerOpen(false)} onPick={pickMember} />
       <ReceiptSheet tx={receipt} fresh onClose={() => setReceipt(null)} />
     </section>
   );

@@ -7,7 +7,8 @@ export interface QueuedTx {
   createdAt: number;
   customer: string; wa: string; discount: number; pay: PayMethod; cash: number;
   cashierName: string;
-  lines: { id: string; cat: string; name: string; price: number; qty: number; terapis: string; service: boolean; key: string }[];
+  memberId?: number; memberFree?: boolean;
+  lines: { id: string; cat: string; name: string; price: number; qty: number; terapis: string; service: boolean; key: string; free?: boolean }[];
   error?: string; // ditolak server (bukan masalah jaringan); tetap disimpan supaya tidak hilang
 }
 

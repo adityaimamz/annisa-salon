@@ -120,6 +120,7 @@ export interface CartLine {
   unit?: BusinessUnit;
   terapis: string; // id terapis sebagai string, '' = belum dipilih
   service: boolean;
+  free?: boolean; // treatment gratis member (harga efektif Rp0, qty 1)
 }
 
 export const EXP_CATS = ['Belanja bahan', 'Stok produk', 'Gaji', 'Listrik & air', 'Sewa', 'Lainnya'];
@@ -182,6 +183,26 @@ export interface StockMonthRow {
   koreksi: number;
   keluar: number;
   sisa: number;
+}
+
+/** Member salon. stamps/freeUsed dihitung dari member_visits. */
+export interface Member {
+  id: number;
+  name: string;
+  wa: string;
+  joinedOn: string; // YYYY-MM-DD
+  expiresOn: string; // YYYY-MM-DD
+  note: string;
+  stamps: number;
+  freeUsed: number;
+}
+
+export interface MemberVisit {
+  id: number;
+  kind: 'stamp' | 'free';
+  treatments: string;
+  at: number;
+  txId: number | null;
 }
 
 export interface Photo {
