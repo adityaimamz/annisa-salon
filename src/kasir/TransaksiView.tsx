@@ -39,6 +39,7 @@ export default function TransaksiView({ refreshKey, therapists, items }: { refre
   const [sel, setSel] = useState<Tx | null>(null);
   const [editing, setEditing] = useState<Tx | null>(null);
   const [unitF, setUnitF] = useState<'all' | 'salon' | 'gbee'>('all');
+  const [fltOpen, setFltOpen] = useState(false);
   const [modal, setModal] = useState<number>(0);
   const [cashSummary, setCashSummary] = useState<DailyCashSummary | null>(null);
   const [editModal, setEditModal] = useState(false);
@@ -193,6 +194,7 @@ export default function TransaksiView({ refreshKey, therapists, items }: { refre
   const staffOpts = [...new Set([...therapists.map((t) => t.name), ...(all ?? []).flatMap((t) => t.lines.map((l) => l.terapis))]
     .filter((x): x is string => !!x))].sort((a, b) => a.localeCompare(b, 'id'));
   const filtered = !!(q.trim() || pay || staffF || minAmt);
+  const fltCount = [pay, staffF, minAmt, unitF !== 'all'].filter(Boolean).length;
   const dateSorted = sort === 'new' || sort === 'old';
 
   function exportCsv() {
@@ -240,31 +242,36 @@ export default function TransaksiView({ refreshKey, therapists, items }: { refre
     <section className="view" aria-label="Transaksi">
       <div className="v-head">
         <div><h1>Transaksi</h1><p className="meta">{meta}</p></div>
-        <div className="seg">
+        <div className="seg seg-scroll" role="group" aria-label="Rentang waktu">
           {seg.map(([r, label]) => (
-            <button key={r} aria-pressed={range === r} onClick={() => { if (r === 'custom' && !from) { const [a, b] = defaultRange(); setFrom(a); setTo(b); } setRange(r); }}>{label}</button>
+            <button key={r} aria-pressed={range === r} onClick={(e) => { e.currentTarget.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); if (r === 'custom' && !from) { const [a, b] = defaultRange(); setFrom(a); setTo(b); } setRange(r); }}>{label}</button>
           ))}
         </div>
       </div>
       {range === 'custom' && <div className="pad" style={{ paddingBottom: 0 }}><DateRange from={from} to={to} onChange={(a, b) => { setFrom(a); setTo(b); }} /></div>}
       <div className="pad">
-        <div className="flt">
+        <div className="flt" data-open={fltOpen || undefined}>
           <input className="input flt-q" type="search" placeholder="Cari nama, layanan, atau no. struk" aria-label="Cari" value={q} onChange={(e) => setQ(e.target.value)} />
-          <Select className="input" ariaLabel="Metode bayar" value={pay} onChange={setPay} placeholder="Semua metode"
-            options={[{ value: '', label: 'Semua metode' }, ...['Tunai', 'QRIS', 'Transfer'].map((m) => ({ value: m, label: m }))]} />
-          <Select className="input" ariaLabel="Karyawan" value={staffF} onChange={setStaffF} placeholder="Semua karyawan"
-            options={[{ value: '', label: 'Semua karyawan' }, ...staffOpts.map((k) => ({ value: k, label: k }))]} />
-          <input className="input" inputMode="numeric" placeholder="Minimal Rp" aria-label="Nominal minimal" value={minAmt}
-            onChange={(e) => { const n = Number(e.target.value.replace(/\D/g, '')); setMinAmt(n ? n.toLocaleString('id-ID') : ''); }} />
-          <Select className="input" ariaLabel="Unit bisnis" value={unitF} onChange={(v) => setUnitF(v as 'all' | 'salon' | 'gbee')}
-            options={[{ value: 'all', label: 'Semua unit' }, { value: 'salon', label: 'Khusus Salon' }, { value: 'gbee', label: 'Khusus Gbee' }]} />
-          <Select className="input" ariaLabel="Urutan" value={sort} onChange={(v) => setSort(v as Sort)}
-            options={[{ value: 'new', label: 'Terbaru' }, { value: 'old', label: 'Terlama' }, { value: 'big', label: 'Total terbesar' }, { value: 'small', label: 'Total terkecil' }]} />
-          {filtered && <button className="linkbtn" type="button" onClick={() => { setQ(''); setPay(''); setStaffF(''); setMinAmt(''); setUnitF('all'); }}>Reset</button>}
-          <button className="btn btn-line btn-sm" type="button" onClick={exportCsv} disabled={!list.length}>Unduh CSV</button>
+          <button className="btn btn-line flt-toggle" type="button" aria-expanded={fltOpen} onClick={() => setFltOpen((v) => !v)}>
+            Filter{fltCount > 0 && <span className="flt-n">{fltCount}</span>}
+          </button>
+          <div className="flt-more">
+            <Select className="input" ariaLabel="Metode bayar" value={pay} onChange={setPay} placeholder="Semua metode"
+              options={[{ value: '', label: 'Semua metode' }, ...['Tunai', 'QRIS', 'Transfer'].map((m) => ({ value: m, label: m }))]} />
+            <Select className="input" ariaLabel="Karyawan" value={staffF} onChange={setStaffF} placeholder="Semua karyawan"
+              options={[{ value: '', label: 'Semua karyawan' }, ...staffOpts.map((k) => ({ value: k, label: k }))]} />
+            <input className="input" inputMode="numeric" placeholder="Minimal Rp" aria-label="Nominal minimal" value={minAmt}
+              onChange={(e) => { const n = Number(e.target.value.replace(/\D/g, '')); setMinAmt(n ? n.toLocaleString('id-ID') : ''); }} />
+            <Select className="input" ariaLabel="Unit bisnis" value={unitF} onChange={(v) => setUnitF(v as 'all' | 'salon' | 'gbee')}
+              options={[{ value: 'all', label: 'Semua unit' }, { value: 'salon', label: 'Khusus Salon' }, { value: 'gbee', label: 'Khusus Gbee' }]} />
+            <Select className="input" ariaLabel="Urutan" value={sort} onChange={(v) => setSort(v as Sort)}
+              options={[{ value: 'new', label: 'Terbaru' }, { value: 'old', label: 'Terlama' }, { value: 'big', label: 'Total terbesar' }, { value: 'small', label: 'Total terkecil' }]} />
+            {filtered && <button className="linkbtn" type="button" onClick={() => { setQ(''); setPay(''); setStaffF(''); setMinAmt(''); setUnitF('all'); }}>Reset</button>}
+            <button className="btn btn-line btn-sm" type="button" onClick={exportCsv} disabled={!list.length}>Unduh CSV</button>
+          </div>
         </div>
         <div className="sumrow">
-          <div>
+          <div className="sum-hero">
             <span>Total Pemasukan</span>
             <b>{rp(sum)}</b>
             <span style={{ display: 'block', fontSize: 11.5, color: 'var(--ink-3)', marginTop: 2 }}>Omzet transaksi</span>
@@ -278,8 +285,19 @@ export default function TransaksiView({ refreshKey, therapists, items }: { refre
               {list.length ? `Rata-rata ${rp(sum / list.length)}` : 'Rata-rata Rp0'}
             </span>
           </div>
+          <div>
+            <span>💰 Total Kas Masuk</span>
+            <b style={{ color: 'var(--green, #1F8A5B)', fontVariantNumeric: 'tabular-nums' }}>
+              {rp((isSingleDay ? sumTunai : sum) + (unitF !== 'gbee' ? modal : 0))}
+            </b>
+            <span style={{ display: 'block', fontSize: 11.5, color: 'var(--ink-3)', marginTop: 2 }}>
+              {isSingleDay
+                ? (cashSummary ? `Sisa kas laci: ${rp(cashSummary.expected_cash)}` : 'Pemasukan tunai + Modal')
+                : 'Pemasukan + Modal (M)'}
+            </span>
+          </div>
           <div
-            className="sum-modal"
+            className="sum-modal sum-wide"
             style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -394,17 +412,6 @@ export default function TransaksiView({ refreshKey, therapists, items }: { refre
             >
               + Suntikan modal &amp; rincian →
             </div>
-          </div>
-          <div>
-            <span>💰 Total Kas Masuk</span>
-            <b style={{ color: 'var(--green, #1F8A5B)', fontVariantNumeric: 'tabular-nums' }}>
-              {rp((isSingleDay ? sumTunai : sum) + (unitF !== 'gbee' ? modal : 0))}
-            </b>
-            <span style={{ display: 'block', fontSize: 11.5, color: 'var(--ink-3)', marginTop: 2 }}>
-              {isSingleDay
-                ? (cashSummary ? `Sisa kas laci: ${rp(cashSummary.expected_cash)}` : 'Pemasukan tunai + Modal')
-                : 'Pemasukan + Modal (M)'}
-            </span>
           </div>
         </div>
         <table className="tx-table">

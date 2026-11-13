@@ -167,7 +167,7 @@ export default function KeuanganView({ cats, refreshKey, onOpenPengeluaran }: { 
   }
 
   const incTunai = tx.filter((t) => t.pay === 'Tunai').reduce((a, t) => a + (unitFilter === 'all' ? t.total : calcPortion(t)[unitFilter]), 0);
-  const outTunai = ex.filter((x) => (x.payMethod ?? 'Tunai') === 'Tunai').reduce((a, x) => a + x.amt, 0);
+  const outTunai = ex.filter((x) => (x.pay ?? 'Tunai') === 'Tunai').reduce((a, x) => a + x.amt, 0);
 
   const cleanNetCash = isSingleDay
     ? (unitFilter === 'all'
@@ -215,7 +215,7 @@ export default function KeuanganView({ cats, refreshKey, onOpenPengeluaran }: { 
             <button type="button" aria-pressed={unitFilter === 'salon'} onClick={() => setUnitFilter('salon')}>Salon</button>
             <button type="button" aria-pressed={unitFilter === 'gbee'} onClick={() => setUnitFilter('gbee')}>Gbee</button>
           </div>
-          <div className="seg">
+          <div className="seg seg-scroll">
             {seg.map(([r, label]) => <button key={r} aria-pressed={range === r} onClick={() => { if (r === 'custom' && !from) { const [a, b] = defaultRange(); setFrom(a); setTo(b); } setRange(r); }}>{label}</button>)}
           </div>
         </div>

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { money, num, rp, slugify } from './format';
 import type { BusinessUnit, Category, Item, Variant } from './types';
+import MoneyInput from './MoneyInput';
+import StokPanel from './StokPanel';
 import { CloseBtn, Icon, Select, Sheet, useConfirm, useToast } from './ui';
 
 interface Props {
@@ -11,7 +13,7 @@ interface Props {
   readOnly?: boolean; // mode karyawan: hanya melihat daftar harga
 }
 
-type Kind = 'layanan' | 'produk';
+type Kind = 'layanan' | 'produk' | 'stok';
 const isProduk = (it: { cat: string }) => it.cat === 'produk';
 
 export default function HargaView({ cats, items, onSave, onDelete, readOnly = false }: Props) {
@@ -24,7 +26,7 @@ export default function HargaView({ cats, items, onSave, onDelete, readOnly = fa
   const svcItems = items.filter((i) => !isProduk(i));
   const prodItems = items.filter(isProduk);
   const pool = kind === 'layanan' ? svcItems : prodItems;
-  const poolCats = cats.filter((c) => (kind === 'produk') === (c.id === 'produk'));
+  const poolCats = cats.filter((c) => (kind !== 'layanan') === (c.id === 'produk'));
   const activeCat = cat;
   const query = q.trim().toLowerCase();
   const match = (it: Item) =>
@@ -48,17 +50,19 @@ export default function HargaView({ cats, items, onSave, onDelete, readOnly = fa
     run(onSave({ ...it, webPrice: v }), `Harga website ${it.name} jadi ${rp(v)}`);
 
   return (
-    <section className="view" aria-label="Harga">
+    <section className="view" aria-label="Katalog">
       <div className="v-head">
-        <div><h1>Harga</h1>
+        <div><h1>Katalog</h1>
           <p className="meta">
             {readOnly
               ? 'Daftar harga Kasir. Perubahan harga hanya bisa dilakukan pemilik.'
               : kind === 'layanan'
               ? 'Harga layanan dipakai di Kasir dan tampil di daftar layanan website.'
+              : kind === 'stok'
+              ? 'Stok produk Gbee dan harga reseller (modal). Penjualan di Kasir mengurangi stok otomatis.'
               : 'Harga Kasir dan harga website produk diatur terpisah. Produk muncul di landing dan halaman Produk.'}
           </p></div>
-        {!readOnly && (
+        {!readOnly && kind !== 'stok' && (
           <button className="btn btn-green btn-sm" type="button" onClick={() => setEditing('new')}>
             {kind === 'layanan' ? '+ Tambah layanan' : '+ Tambah produk'}
           </button>
@@ -72,7 +76,11 @@ export default function HargaView({ cats, items, onSave, onDelete, readOnly = fa
           <button role="tab" type="button" aria-selected={kind === 'produk'} onClick={() => switchKind('produk')}>
             Produk<span className="n">{prodItems.length}</span>
           </button>
+          {!readOnly && (
+            <button role="tab" type="button" aria-selected={kind === 'stok'} onClick={() => switchKind('stok')}>Stok</button>
+          )}
         </div>
+        {kind === 'stok' ? <StokPanel items={prodItems} /> : <>
         <div className="pr-tools">
           <label className="search">
             {Icon.search()}
@@ -144,6 +152,7 @@ export default function HargaView({ cats, items, onSave, onDelete, readOnly = fa
             </div>
           </section>
         )) : <p className="empty-cart">Tidak ada item yang cocok.</p>}
+        </>}
       </div>
 
       {!readOnly && <ItemEditor
@@ -157,28 +166,6 @@ export default function HargaView({ cats, items, onSave, onDelete, readOnly = fa
         onDelete={async (it) => { await onDelete(it.id); toast(`${it.name} dihapus`); }}
       />}
     </section>
-  );
-}
-
-function MoneyInput({ value, label, onCommit }: { value: number; label: string; onCommit: (v: number) => void }) {
-  const [text, setText] = useState(money(value));
-  const [saved, setSaved] = useState(false);
-  useEffect(() => setText(money(value)), [value]);
-  const commit = () => {
-    const v = num(text);
-    if (!v) { setText(money(value)); return; }
-    if (v === value) return;
-    setSaved(true);
-    onCommit(v);
-    window.setTimeout(() => setSaved(false), 1200);
-  };
-  return (
-    <label className="money"><span>Rp</span>
-      <input className={`input${saved ? ' saved' : ''}`} inputMode="numeric" value={text} aria-label={`Harga ${label}`}
-        onChange={(e) => { setText(money(num(e.target.value))); setSaved(false); }}
-        onFocus={(e) => e.target.select()}
-        onBlur={commit} onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }} />
-    </label>
   );
 }
 

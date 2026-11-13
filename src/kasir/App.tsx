@@ -11,20 +11,19 @@ import KeuanganView from './KeuanganView';
 import Login from './Login';
 import PengeluaranView from './PengeluaranView';
 import { cacheGet, cacheSet, dequeue, enqueue, isNetworkError, listQueue } from './offline';
+import TabbedView from './TabbedView';
 import TransaksiView from './TransaksiView';
 import type { Category, Item, Profile, Therapist } from './types';
 import { ConfirmProvider, Icon, ToastProvider, useToast } from './ui';
 import { supabase, supabaseReady } from '../lib/supabase';
 
-type View = 'kasir' | 'transaksi' | 'keuangan' | 'pengeluaran' | 'harga' | 'galeri' | 'karyawan';
+type View = 'kasir' | 'transaksi' | 'keuangan' | 'katalog' | 'pengaturan';
 const NAV: { id: View; label: string; icon: (s?: number) => React.ReactNode; ownerOnly?: boolean }[] = [
   { id: 'kasir', label: 'Kasir', icon: Icon.kasir },
   { id: 'transaksi', label: 'Transaksi', icon: Icon.transaksi, ownerOnly: true },
   { id: 'keuangan', label: 'Keuangan', icon: Icon.keuangan, ownerOnly: true },
-  { id: 'pengeluaran', label: 'Pengeluaran', icon: Icon.pengeluaran, ownerOnly: true },
-  { id: 'harga', label: 'Harga', icon: Icon.harga },
-  { id: 'galeri', label: 'Galeri', icon: Icon.galeri, ownerOnly: true },
-  { id: 'karyawan', label: 'Karyawan', icon: Icon.karyawan, ownerOnly: true },
+  { id: 'katalog', label: 'Katalog', icon: Icon.harga },
+  { id: 'pengaturan', label: 'Pengaturan', icon: Icon.pengaturan, ownerOnly: true },
 ];
 
 export default function App() {
@@ -59,6 +58,8 @@ function Shell({ userId }: { userId: string }) {
   const [error, setError] = useState('');
   const [view, setView] = useState<View>('kasir');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [keuTab, setKeuTab] = useState<'ringkasan' | 'pengeluaran'>('ringkasan');
+  const [setTab, setSetTab] = useState<'galeri' | 'karyawan'>('galeri');
   const [online, setOnline] = useState(() => navigator.onLine);
   const [pending, setPending] = useState(0);
   const [rejected, setRejected] = useState(0);
@@ -190,11 +191,21 @@ function Shell({ userId }: { userId: string }) {
           <KasirView cats={cats} items={items} therapists={therapists} profile={profile} onPaid={() => setRefreshKey((k) => k + 1)} onQueued={flush} />
         </div>
         {current === 'transaksi' && <TransaksiView refreshKey={refreshKey} therapists={therapists} items={items} />}
-        {current === 'keuangan' && <KeuanganView cats={cats} refreshKey={refreshKey} onOpenPengeluaran={() => setView('pengeluaran')} />}
-        {current === 'pengeluaran' && <PengeluaranView refreshKey={refreshKey} />}
-        {current === 'harga' && <HargaView cats={cats} items={items} onSave={save} onDelete={remove} readOnly={!isOwner} />}
-        {current === 'galeri' && <GaleriView />}
-        {current === 'karyawan' && <KaryawanView onTherapists={setTherapists} />}
+        {current === 'keuangan' && (
+          <TabbedView label="Keuangan" value={keuTab} onChange={setKeuTab}
+            tabs={[{ id: 'ringkasan', label: 'Ringkasan' }, { id: 'pengeluaran', label: 'Pengeluaran' }]}>
+            {keuTab === 'ringkasan'
+              ? <KeuanganView cats={cats} refreshKey={refreshKey} onOpenPengeluaran={() => setKeuTab('pengeluaran')} />
+              : <PengeluaranView refreshKey={refreshKey} />}
+          </TabbedView>
+        )}
+        {current === 'katalog' && <HargaView cats={cats} items={items} onSave={save} onDelete={remove} readOnly={!isOwner} />}
+        {current === 'pengaturan' && (
+          <TabbedView label="Pengaturan" value={setTab} onChange={setSetTab}
+            tabs={[{ id: 'galeri', label: 'Galeri' }, { id: 'karyawan', label: 'Karyawan' }]}>
+            {setTab === 'galeri' ? <GaleriView /> : <KaryawanView onTherapists={setTherapists} />}
+          </TabbedView>
+        )}
       </main>
 
       <nav className="tabbar" aria-label="Menu aplikasi" style={{ gridTemplateColumns: `repeat(${nav.length}, 1fr)` }}>

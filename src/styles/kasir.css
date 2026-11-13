@@ -194,11 +194,11 @@ body{background:var(--paper);font-size:15px;overflow:hidden}
 
 /* ===== TRANSAKSI ===== */
 .sumrow{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:20px}
-.sumrow div{background:var(--card);padding:14px 16px}
+.sumrow > div{background:var(--card);padding:14px 16px;min-width:0}
 .sumrow span{display:block;font-size:12.5px;color:var(--ink-3)}
 .sumrow b{font-size:20px;font-variant-numeric:tabular-nums}
 @media (max-width:860px){.sumrow{grid-template-columns:repeat(2,1fr)}}
-@media (max-width:540px){.sumrow{grid-template-columns:1fr}}
+@media (max-width:540px){.sumrow{grid-template-columns:repeat(2,minmax(0,1fr))}.sumrow>.sum-hero,.sumrow>.sum-wide{grid-column:1/-1}.sumrow>.sum-hero b{font-size:26px}}
 @media (max-width:600px){.sumrow b{font-size:17px}}
 
 /* ===== Buku Kas Sheet Responsive ===== */
@@ -306,6 +306,11 @@ body{background:var(--paper);font-size:15px;overflow:hidden}
 
 /* ===== HARGA ===== */
 /* tab Layanan | Produk di halaman Harga */
+.tabview{height:100%;display:flex;flex-direction:column}
+.tabview>.view{flex:1;min-height:0;height:auto}
+.tabview-bar{flex:none;padding:10px 24px 0;background:var(--card);border-bottom:1px solid var(--line)}
+@media (max-width:600px){.tabview-bar{padding:6px 16px 0}}
+.tabview-bar .kind-tabs{margin-bottom:-1px;border-bottom:0;max-width:1280px;margin-inline:auto}
 .kind-tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--line)}
 .kind-tabs button{display:inline-flex;align-items:center;gap:8px;height:46px;padding:0 16px;margin-bottom:-1px;border:0;border-bottom:2px solid transparent;background:none;color:var(--ink-3);font-weight:600;font-size:15px;cursor:pointer;transition:color .15s,border-color .15s}
 .kind-tabs button:hover{color:var(--ink)}
@@ -512,9 +517,49 @@ body{background:var(--paper);font-size:15px;overflow:hidden}
 
 /* ---------- filter halaman Pengeluaran ---------- */
 .flt{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:14px}
-.flt > .input{flex:1 1 150px;min-width:0;height:44px;padding:0 14px}
+.flt > .input,.flt-more > .input{flex:1 1 150px;min-width:0;height:44px;padding:0 14px}
 .flt > .flt-q{flex:2 1 240px}
-.flt > .linkbtn{flex:none}
+.flt .linkbtn{flex:none}
+.flt-more{display:contents}
+.flt-toggle{display:none;height:44px;gap:8px;align-items:center}
+.flt-n{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--green);color:var(--cream);font-size:12px;font-weight:600}
+@media (max-width:700px){
+  .flt > .flt-q{flex:1 1 0}
+  .flt-toggle{display:inline-flex}
+  .flt-more{display:none}
+  .flt[data-open] .flt-more{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:1 1 100%;animation:k-rise 200ms var(--ease-out) both}
+  .flt[data-open] .flt-more > .input{width:100%}
+  .flt[data-open] .flt-more > .btn,.flt[data-open] .flt-more > .linkbtn{grid-column:1/-1}
+}
+/* baris pilihan rentang: satu baris, geser ke samping di HP */
+@media (max-width:700px){
+  .seg-scroll{display:flex;width:100%;overflow-x:auto;scrollbar-width:none;overscroll-behavior-x:contain}
+  .seg-scroll::-webkit-scrollbar{display:none}
+  .seg-scroll button{flex:none;white-space:nowrap}
+}
+/* label kecil di daftar pengeluaran: selalu tampil, warna konsisten */
+.tg{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:600;line-height:1.4;white-space:nowrap}
+.tg-salon{background:#E3F0E7;color:#256B3C}
+.tg-gbee{background:#FFF0DC;color:#B34700}
+.tg-umum{background:var(--paper-2);color:var(--ink-2)}
+.tg-tunai{background:transparent;color:var(--ink-3);box-shadow:inset 0 0 0 1px var(--line-strong)}
+.tg-trf{background:#E6EEFB;color:#1F4E9C}
+.tx-table.exp .c-cat{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.tx-table.exp .c-note{font-weight:500}
+@media (max-width:700px){
+  .tx-table.exp tr:not(.day-row){grid-template-columns:auto 1fr auto;gap:8px 10px;align-items:center}
+  .tx-table.exp td.c-note{grid-column:1/3;grid-row:1;font-weight:600;font-size:15px;overflow-wrap:anywhere}
+  .tx-table.exp td.c-amt{grid-column:3;grid-row:1}
+  .tx-table.exp td.c-date{grid-column:1/-1;grid-row:3;font-size:12.5px;color:var(--ink-3)}
+  .tx-table.exp td.c-cat{grid-column:1/-1;grid-row:2}
+  .tx-table.exp tfoot tr{grid-template-columns:1fr auto}
+}
+.cat-sum{scrollbar-width:none}
+@media (max-width:700px){
+  .cat-sum{flex-wrap:nowrap;overflow-x:auto;margin-inline:-16px;padding:0 16px 4px}
+  .cat-sum::-webkit-scrollbar{display:none}
+  .cat-pill{flex:none}
+}
 .cat-sum{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
 .cat-pill{
   display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;cursor:pointer;
@@ -548,3 +593,79 @@ body{background:var(--paper);font-size:15px;overflow:hidden}
 .sel-ul{list-style:none;margin:0;padding:0}
 .has-search .sel-ul{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain}
 .sel-empty{padding:12px 10px;font-size:14px;color:var(--ink-3)}
+
+/* ===== STOK (tab di Katalog) ===== */
+.stk-tools{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;margin-bottom:16px}
+.stk-actions{display:flex;gap:8px;flex-wrap:wrap}
+.stk-hint{background:var(--paper-2);border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:14px;color:var(--ink-2)}
+.stk-row{display:grid;grid-template-columns:1fr 92px 108px 168px;gap:8px 16px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}
+.stk-row:last-child{border-bottom:0}
+.stk-name b{font-weight:600}
+.stk-name .k{color:var(--ink-3);font-size:13px;margin-left:6px}
+.stk-note{display:block;color:var(--ink-3);font-size:12px;margin-top:2px}
+.stk-sisa{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:44px;border:1px solid var(--line);border-radius:10px;background:var(--paper);cursor:pointer;font:inherit;color:var(--ink);transition:border-color .15s,transform 160ms var(--ease-out)}
+.stk-sisa:hover{border-color:var(--ink-3)}
+.stk-sisa:active{transform:scale(.97)}
+.stk-sisa b{font-size:18px;line-height:1.1;font-variant-numeric:tabular-nums}
+.stk-sisa small,.stk-jual small,.stk-cost small{font-size:11.5px;color:var(--ink-3)}
+.stk-sisa.none{border-style:dashed}
+.stk-sisa.none small{padding:0 6px;text-align:center}
+.stk-sisa.neg b,td.neg,.stk-hist .q.neg{color:var(--danger)}
+.stk-jual{display:flex;flex-direction:column;text-align:right}
+.stk-jual b{font-variant-numeric:tabular-nums;font-size:15px}
+.stk-cost small{display:none}
+@media (max-width:600px){
+  .stk-row{grid-template-columns:auto 1fr 1fr;padding:12px 14px}
+  .stk-row .stk-name{grid-column:1/-1}
+  .stk-sisa{min-width:84px}
+  .stk-cost{grid-column:1/-1}
+  .stk-cost small{display:block;margin-bottom:4px}
+}
+.sheet.sheet-stok{width:min(560px,calc(100vw - 16px));max-height:calc(100dvh - 24px)}
+@media (max-width:480px){.sheet.sheet-stok .sheet-in{padding:18px 14px}}
+.stk-form-head,.stk-frow{display:grid;grid-template-columns:1fr 76px 150px;gap:8px 10px;align-items:center}
+.stk-form-head.awal,.stk-frow.awal{grid-template-columns:1fr 96px}
+.stk-form-head{font-size:12px;font-weight:600;color:var(--ink-3);padding:0 4px 6px}
+.stk-form-head span:not(:first-child){text-align:right}
+.stk-rows{max-height:min(46dvh,420px);overflow-y:auto;border:1px solid var(--line);border-radius:10px}
+.stk-frow{padding:8px 10px;border-bottom:1px solid var(--line)}
+.stk-frow:last-child{border-bottom:0}
+.stk-frow.locked{opacity:.55}
+.stk-qty{height:40px;text-align:right;padding:0 10px;font-weight:600;font-variant-numeric:tabular-nums}
+.stk-frow .money input{font-size:14px;padding-left:32px}
+@media (max-width:480px){
+  .stk-form-head,.stk-frow{grid-template-columns:1fr 60px 118px}
+  .stk-form-head.awal,.stk-frow.awal{grid-template-columns:1fr 80px}
+  .stk-frow .money span{left:8px}
+  .stk-frow .money input{padding-left:26px;padding-right:8px}
+}
+.stk-total{margin-top:14px;padding:12px 14px;background:var(--paper-2);border-radius:10px;display:grid;gap:10px}
+.stk-total .row{display:flex;justify-content:space-between;align-items:baseline}
+.stk-total b{font-variant-numeric:tabular-nums;font-size:18px}
+.stk-check{display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-size:14px}
+.stk-check input{margin-top:3px;accent-color:var(--green)}
+.stk-check small{color:var(--ink-3)}
+.stk-koreksi{margin-top:18px}
+.stk-koreksi .label{display:block;font-size:14px;font-weight:600;margin-bottom:8px}
+.stk-koreksi .label small{font-weight:400;color:var(--ink-3)}
+.stk-koreksi-row{display:grid;grid-template-columns:110px 1fr auto;gap:8px}
+@media (max-width:480px){.stk-koreksi-row{grid-template-columns:1fr 1fr}.stk-koreksi-row .btn{grid-column:1/-1}}
+.stk-h4{font-size:12.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:20px 0 6px}
+.stk-hist{list-style:none;margin:0;padding:0;max-height:min(36dvh,320px);overflow-y:auto}
+.stk-hist li{display:grid;grid-template-columns:1fr auto 32px;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.stk-hist li:last-child{border-bottom:0}
+.stk-hist .m{display:block;font-size:12.5px;color:var(--ink-3)}
+.stk-hist .q{font-weight:700;font-variant-numeric:tabular-nums}
+.stk-empty,.stk-foot{color:var(--ink-3);font-size:13.5px}
+.stk-foot{margin-top:12px}
+.stk-month{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.stk-month label{font-weight:600;font-size:14px}
+.stk-month .input{width:auto;min-width:170px}
+.stk-table-wrap{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:10px}
+.stk-table{width:100%;border-collapse:collapse;font-size:14.5px;font-variant-numeric:tabular-nums}
+.stk-table th,.stk-table td{padding:10px 14px;text-align:right;border-bottom:1px solid var(--line)}
+.stk-table th:first-child,.stk-table td:first-child{text-align:left}
+.stk-table th{font-size:12.5px;color:var(--ink-3);font-weight:600;white-space:nowrap}
+.stk-table .k{color:var(--ink-3);font-size:12.5px}
+.stk-table tfoot td{font-weight:700;border-bottom:0;background:var(--paper-2)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}

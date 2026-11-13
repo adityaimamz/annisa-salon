@@ -5,11 +5,12 @@ import { dayKey, fmtDay, rp, startOfDay } from './format';
 import type { Expense } from './types';
 import { Select, useToast } from './ui';
 
-type Preset = '7' | '30' | 'month' | 'lastmonth' | 'all' | 'custom';
+type Preset = 'today' | 'yesterday' | '7' | '30' | 'month' | 'lastmonth' | 'all' | 'custom';
 type Sort = 'new' | 'old' | 'big' | 'small';
 const PAGE = 25;
-const PRESETS: [Preset, string][] = [['7', '7 hari'], ['30', '30 hari'], ['month', 'Bulan ini'], ['lastmonth', 'Bulan lalu'], ['all', 'Semua'], ['custom', 'Pilih tanggal']];
+const PRESETS: [Preset, string][] = [['today', 'Hari ini'], ['yesterday', 'Kemarin'], ['7', '7 hari'], ['30', '30 hari'], ['month', 'Bulan ini'], ['lastmonth', 'Bulan lalu'], ['all', 'Semua'], ['custom', 'Pilih tanggal']];
 
+const UNIT_TAG = { salon: ['tg-salon', 'Salon'], gbee: ['tg-gbee', 'Gbee'], operasional: ['tg-umum', 'Umum'] } as const;
 const csvCell = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
 
 export default function PengeluaranView({ refreshKey }: { refreshKey: number }) {
@@ -25,6 +26,7 @@ export default function PengeluaranView({ refreshKey }: { refreshKey: number }) 
   const [sort, setSort] = useState<Sort>('new');
   const [page, setPage] = useState(0);
   const [open, setOpen] = useState(false);
+  const [fltOpen, setFltOpen] = useState(false);
   const [editing, setEditing] = useState<Expense | null>(null);
 
   useEffect(() => {
@@ -35,14 +37,15 @@ export default function PengeluaranView({ refreshKey }: { refreshKey: number }) 
   const today = startOfDay(new Date());
   const [start, end] = useMemo(() => {
     const t = new Date(today), e = new Date(today); e.setDate(e.getDate() + 1);
-    if (preset === '7') t.setDate(t.getDate() - 6);
+    if (preset === 'yesterday') { t.setDate(t.getDate() - 1); e.setDate(e.getDate() - 1); }
+    else if (preset === '7') t.setDate(t.getDate() - 6);
     else if (preset === '30') t.setDate(t.getDate() - 29);
     else if (preset === 'month') t.setDate(1);
     else if (preset === 'lastmonth') {
       e.setTime(new Date(today.getFullYear(), today.getMonth(), 1).getTime());
       t.setTime(new Date(today.getFullYear(), today.getMonth() - 1, 1).getTime());
     } else if (preset === 'all') { t.setTime(0); e.setFullYear(e.getFullYear() + 100); }
-    else {
+    else if (preset === 'custom') {
       const f = from ? new Date(`${from}T00:00:00`).getTime() : 0;
       const u = to ? new Date(`${to}T00:00:00`).getTime() + 864e5 : Infinity;
       return [f, u];
@@ -71,6 +74,7 @@ export default function PengeluaranView({ refreshKey }: { refreshKey: number }) 
   const shown = rows.slice(page * PAGE, page * PAGE + PAGE);
   const perCat = cats.map((c) => ({ c, v: rows.filter((x) => x.cat === c).reduce((a, x) => a + x.amt, 0) })).filter((x) => x.v).sort((a, b) => b.v - a.v);
   const filtered = !!(q.trim() || cat || minAmt);
+  const fltCount = [cat, minAmt, sort !== 'new'].filter(Boolean).length;
 
   function exportCsv() {
     const lines = [['Tanggal', 'Kategori', 'Keterangan', 'Nominal'].map(csvCell).join(',')];
@@ -95,8 +99,10 @@ export default function PengeluaranView({ refreshKey }: { refreshKey: number }) 
         </div>
       </div>
       <div className="pad">
-        <div className="seg" role="group" aria-label="Rentang" style={{ marginBottom: 12, flexWrap: 'wrap' }}>
-          {PRESETS.map(([p, label]) => <button key={p} aria-pressed={preset === p} onClick={() => setPreset(p)}>{label}</button>)}
+        <div className="seg seg-scroll" role="group" aria-label="Rentang" style={{ marginBottom: 12 }}>
+          {PRESETS.map(([p, label]) => (
+            <button key={p} aria-pressed={preset === p} onClick={(e) => { e.currentTarget.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); setPreset(p); }}>{label}</button>
+          ))}
         </div>
         {preset === 'custom' && (
           <div className="field row2" style={{ marginBottom: 12 }}>
@@ -104,15 +110,20 @@ export default function PengeluaranView({ refreshKey }: { refreshKey: number }) 
             <div><label htmlFor="pgTo">Sampai</label><input className="input" id="pgTo" type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} /></div>
           </div>
         )}
-        <div className="flt">
+        <div className="flt" data-open={fltOpen || undefined}>
           <input className="input flt-q" type="search" placeholder="Cari keterangan atau kategori" aria-label="Cari" value={q} onChange={(e) => setQ(e.target.value)} />
-          <Select className="input" ariaLabel="Kategori" value={cat} onChange={setCat} placeholder="Semua kategori"
-            options={[{ value: '', label: 'Semua kategori' }, ...cats.map((c) => ({ value: c, label: c }))]} />
-          <Select className="input" ariaLabel="Urutan" value={sort} onChange={(v) => setSort(v as Sort)}
-            options={[{ value: 'new', label: 'Terbaru' }, { value: 'old', label: 'Terlama' }, { value: 'big', label: 'Nominal terbesar' }, { value: 'small', label: 'Nominal terkecil' }]} />
-          <input className="input" inputMode="numeric" placeholder="Minimal Rp" aria-label="Nominal minimal" value={minAmt}
-            onChange={(e) => { const n = Number(e.target.value.replace(/\D/g, '')); setMinAmt(n ? n.toLocaleString('id-ID') : ''); }} />
-          {filtered && <button className="linkbtn" type="button" onClick={() => { setQ(''); setCat(''); setMinAmt(''); }}>Reset</button>}
+          <button className="btn btn-line flt-toggle" type="button" aria-expanded={fltOpen} onClick={() => setFltOpen((v) => !v)}>
+            Filter{fltCount > 0 && <span className="flt-n">{fltCount}</span>}
+          </button>
+          <div className="flt-more">
+            <Select className="input" ariaLabel="Kategori" value={cat} onChange={setCat} placeholder="Semua kategori"
+              options={[{ value: '', label: 'Semua kategori' }, ...cats.map((c) => ({ value: c, label: c }))]} />
+            <Select className="input" ariaLabel="Urutan" value={sort} onChange={(v) => setSort(v as Sort)}
+              options={[{ value: 'new', label: 'Terbaru' }, { value: 'old', label: 'Terlama' }, { value: 'big', label: 'Nominal terbesar' }, { value: 'small', label: 'Nominal terkecil' }]} />
+            <input className="input" inputMode="numeric" placeholder="Minimal Rp" aria-label="Nominal minimal" value={minAmt}
+              onChange={(e) => { const n = Number(e.target.value.replace(/\D/g, '')); setMinAmt(n ? n.toLocaleString('id-ID') : ''); }} />
+            {(filtered || sort !== 'new') && <button className="linkbtn" type="button" onClick={() => { setQ(''); setCat(''); setMinAmt(''); setSort('new'); }}>Reset</button>}
+          </div>
         </div>
 
         {perCat.length > 1 && (
@@ -124,7 +135,7 @@ export default function PengeluaranView({ refreshKey }: { refreshKey: number }) 
           </div>
         )}
 
-        <table className="tx-table">
+        <table className="tx-table exp">
           <thead><tr><th>Tanggal</th><th>Kategori</th><th>Keterangan</th><th className="num">Nominal</th></tr></thead>
           <tbody>
             {all === null ? (
@@ -132,22 +143,14 @@ export default function PengeluaranView({ refreshKey }: { refreshKey: number }) 
             ) : shown.length ? shown.map((x) => (
               <tr key={x.id} className="tx-row" tabIndex={0} onClick={() => openSheet(x)}
                 onKeyDown={(e) => { if (e.key === 'Enter') openSheet(x); }}>
-                <td className="c-time">{fmtDay(x.at, { day: 'numeric', month: 'short', year: 'numeric' })}</td>
-                <td>
+                <td className="c-date">{fmtDay(x.at, { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+                <td className="c-cat">
                   <span className="pill">{x.cat}</span>
-                  {x.unit && x.unit !== 'operasional' && (
-                    <span style={{ marginLeft: 6, fontSize: 11, background: x.unit === 'gbee' ? '#FFF3E0' : '#E8F5E9', color: x.unit === 'gbee' ? '#E65100' : '#1B5E20', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>
-                      {x.unit === 'gbee' ? 'Gbee' : 'Salon'}
-                    </span>
-                  )}
-                  {x.pay === 'Transfer' && (
-                    <span style={{ marginLeft: 6, fontSize: 11, background: '#F1F3F4', color: '#5F6368', padding: '1px 6px', borderRadius: 4 }}>
-                      Trf
-                    </span>
-                  )}
+                  <span className={`tg ${UNIT_TAG[x.unit ?? 'operasional'][0]}`}>{UNIT_TAG[x.unit ?? 'operasional'][1]}</span>
+                  <span className={`tg ${x.pay === 'Transfer' ? 'tg-trf' : 'tg-tunai'}`}>{x.pay === 'Transfer' ? 'Transfer' : 'Tunai'}</span>
                 </td>
-                <td>{x.note || <span className="muted">-</span>}</td>
-                <td className="c-total num"><b>{rp(x.amt)}</b></td>
+                <td className="c-note">{x.note || <span className="muted">-</span>}</td>
+                <td className="c-amt num"><b>{rp(x.amt)}</b></td>
               </tr>
             )) : (
               <tr><td colSpan={4} className="muted" style={{ textAlign: 'center', padding: 40 }}>

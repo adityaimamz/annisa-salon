@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 import type {
-  BusinessUnit, CapitalInjection, CartLine, Category, DailyCashLog, DailyCashSummary, Expense, Item, PayMethod, Photo, Profile, StaffMember, Therapist, Tx, TxLine,
+  BusinessUnit, CapitalInjection, CartLine, Category, DailyCashLog, DailyCashSummary, Expense, Item, ItemCost, PayMethod, Photo, Profile, StaffMember, StockEntry, StockKind, StockMonthRow, Therapist, Tx, TxLine,
 } from './types';
 
 function db() {
@@ -11,6 +11,78 @@ function db() {
 const fail = (e: { message: string } | null) => {
   if (e) throw new Error(e.message);
 };
+
+/* ---------- stok produk (Gbee) ---------- */
+/** Sisa stok per produk. Produk yang belum punya catatan stok tidak ada di hasil. */
+export async function loadStockLevels(): Promise<Record<string, number>> {
+  const { data, error } = await db().rpc('get_stock_levels');
+  fail(error);
+  const out: Record<string, number> = {};
+  for (const r of (data ?? []) as { item_id: string; sisa: number }[]) out[r.item_id] = r.sisa;
+  return out;
+}
+
+export async function loadItemCosts(): Promise<Record<string, ItemCost>> {
+  const { data, error } = await db().from('item_costs').select('item_id,reseller_price,source');
+  fail(error);
+  const out: Record<string, ItemCost> = {};
+  for (const r of data ?? []) out[r.item_id] = { price: r.reseller_price, source: r.source ?? '' };
+  return out;
+}
+
+export async function setResellerPrice(itemId: string, price: number) {
+  const { error } = await db().from('item_costs')
+    .upsert({ item_id: itemId, reseller_price: price, updated_at: new Date().toISOString() });
+  fail(error);
+}
+
+export async function addStockEntries(p: {
+  kind: StockKind;
+  items: { itemId: string; qty: number; unitCost?: number }[];
+  source?: string;
+  at?: number;
+  note?: string;
+  expense?: boolean;
+  pay?: 'Tunai' | 'Transfer';
+}): Promise<number> {
+  const { data, error } = await db().rpc('add_stock_entries', {
+    p_items: p.items.map((i) => ({ item_id: i.itemId, qty: i.qty, unit_cost: i.unitCost ?? null })),
+    p_kind: p.kind,
+    p_source: p.source ?? null,
+    p_at: p.at ? new Date(p.at).toISOString() : null,
+    p_note: p.note ?? null,
+    p_expense: p.expense ?? false,
+    p_pay: p.pay ?? 'Tunai',
+  });
+  fail(error);
+  return data as number;
+}
+
+export async function loadStockEntries(itemId: string): Promise<StockEntry[]> {
+  const { data, error } = await db().from('stock_entries')
+    .select('id,item_id,kind,qty,source,unit_cost,note,at')
+    .eq('item_id', itemId).order('at', { ascending: false }).order('id', { ascending: false });
+  fail(error);
+  return (data ?? []).map((r) => ({
+    id: r.id, itemId: r.item_id, kind: r.kind, qty: r.qty, source: r.source ?? '',
+    unitCost: r.unit_cost, note: r.note ?? '', at: Date.parse(r.at),
+  }));
+}
+
+export async function deleteStockEntry(id: number) {
+  const { error } = await db().rpc('delete_stock_entry', { p_id: id });
+  fail(error);
+}
+
+/** monthFirst: 'YYYY-MM-01' */
+export async function loadStockMonthly(monthFirst: string): Promise<StockMonthRow[]> {
+  const { data, error } = await db().rpc('get_stock_monthly', { p_month: monthFirst });
+  fail(error);
+  return ((data ?? []) as Record<string, number | string>[]).map((r) => ({
+    itemId: r.item_id as string, awal: r.awal as number, masuk: r.masuk as number,
+    koreksi: r.koreksi as number, keluar: r.keluar as number, sisa: r.sisa as number,
+  }));
+}
 
 /* ---------- profil ---------- */
 export async function loadProfile(userId: string): Promise<Profile | null> {

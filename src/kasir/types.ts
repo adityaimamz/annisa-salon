@@ -159,6 +159,31 @@ export interface DailyCashSummary {
   }[];
 }
 
+export type StockKind = 'awal' | 'masuk' | 'koreksi';
+
+export interface StockEntry {
+  id: number;
+  itemId: string;
+  kind: StockKind;
+  qty: number;
+  source: string;
+  unitCost: number | null;
+  note: string;
+  at: number;
+}
+
+/** Harga reseller (modal) per produk. Khusus owner. */
+export interface ItemCost { price: number | null; source: string }
+
+export interface StockMonthRow {
+  itemId: string;
+  awal: number;
+  masuk: number;
+  koreksi: number;
+  keluar: number;
+  sisa: number;
+}
+
 export interface Photo {
   id: string;
   title: string;
