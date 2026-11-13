@@ -134,7 +134,8 @@ function StockForm({ mode, items, costs, levels, onClose, onSaved }: Readonly<{
 
   async function submit(e: React.SyntheticEvent) {
     e.preventDefault();
-    if (!mode || !filled.length || busy) return;
+    if (!mode || busy) return;
+    if (!filled.length) { toast('Isi jumlah minimal satu produk dulu', true); return; }
     const [Y, M, D] = date.split('-').map(Number);
     const at = date === today ? undefined : new Date(Y, M - 1, D, isAwal ? 0 : 12).getTime();
     setBusy(true);
@@ -218,8 +219,8 @@ function StockForm({ mode, items, costs, levels, onClose, onSaved }: Readonly<{
         )}
 
         <div className="sheet-actions" style={{ marginTop: 16 }}>
-          <button className="btn btn-green" type="submit" disabled={!filled.length || busy}>
-            {busy ? 'Menyimpan…' : filled.length ? `Simpan ${filled.length} produk` : 'Isi jumlah dulu'}
+          <button className="btn btn-green" type="submit" disabled={busy}>
+            {busy ? 'Menyimpan…' : filled.length ? `Simpan ${filled.length} produk` : 'Simpan'}
           </button>
         </div>
       </form>
@@ -249,7 +250,8 @@ function HistorySheet({ item, sisa, onClose, onChanged }: Readonly<{
   async function koreksi(e: React.SyntheticEvent) {
     e.preventDefault();
     const n = Math.trunc(Number(qty));
-    if (!item || !n || busy) return;
+    if (!item || busy) return;
+    if (!n) { toast('Isi jumlah koreksi, misal +5 atau -2', true); return; }
     setBusy(true);
     try {
       await addStockEntries({ kind: 'koreksi', items: [{ itemId: item.id, qty: n }], note: note.trim() || undefined });
@@ -280,7 +282,7 @@ function HistorySheet({ item, sisa, onClose, onChanged }: Readonly<{
           <div className="stk-koreksi-row">
             <input className="input" type="number" inputMode="numeric" step="1" placeholder="+5 atau -2" aria-label="Jumlah koreksi" value={qty} onChange={(e) => setQty(e.target.value)} />
             <input className="input" placeholder="Catatan (opsional)" aria-label="Catatan koreksi" value={note} onChange={(e) => setNote(e.target.value)} />
-            <button className="btn btn-line btn-sm" type="submit" disabled={!Math.trunc(Number(qty)) || busy}>Simpan</button>
+            <button className="btn btn-line btn-sm" type="submit" disabled={busy}>Simpan</button>
           </div>
         </form>
 

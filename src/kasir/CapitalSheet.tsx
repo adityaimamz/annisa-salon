@@ -38,9 +38,12 @@ export default function CapitalSheet({ open, onClose, onSaved }: Props) {
   const [date, setDate] = useState('');
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
+  const [amtErr, setAmtErr] = useState(false);
+  const [dateErr, setDateErr] = useState(false);
 
   useEffect(() => {
     if (!open) return;
+    setAmtErr(false); setDateErr(false);
     setDate(dayKey(new Date()));
     setAmt('');
     setNote('');
@@ -101,12 +104,17 @@ export default function CapitalSheet({ open, onClose, onSaved }: Props) {
   }, [historyItems, logFilter]);
 
   const finalCat = customCat.trim() || cat;
-  const canSubmit = !!num(amt) && finalCat;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!canSubmit || saving) return;
+    if (saving) return;
     const a = num(amt);
+    if (!a || !finalCat || !date) {
+      setAmtErr(!a); setDateErr(!date);
+      document.getElementById(!a ? 'capAmt' : !date ? 'capDate' : 'capCustom')?.focus();
+      toast(!a ? 'Nominal modal belum diisi' : !date ? 'Tanggal belum diisi' : 'Pilih jenis suntikan dana dulu', true);
+      return;
+    }
     setSaving(true);
     try {
       const [Y, M, D] = date.split('-').map(Number);
@@ -200,6 +208,7 @@ export default function CapitalSheet({ open, onClose, onSaved }: Props) {
               </div>
               <input
                 className="input"
+                id="capCustom"
                 style={{ marginTop: 8 }}
                 placeholder="Atau tulis jenis suntikan lainnya…"
                 value={customCat}
@@ -217,9 +226,11 @@ export default function CapitalSheet({ open, onClose, onSaved }: Props) {
                   inputMode="numeric"
                   placeholder="Rp0"
                   value={amt ? 'Rp' + money(num(amt)) : ''}
-                  onChange={(e) => setAmt(e.target.value)}
+                  aria-invalid={amtErr || undefined}
+                  onChange={(e) => { setAmt(e.target.value); setAmtErr(false); }}
                   autoFocus
                 />
+                {amtErr && <p className="field-err" role="alert">Nominal wajib diisi.</p>}
               </div>
               <div>
                 <label htmlFor="capDate">Tanggal</label>
@@ -228,8 +239,10 @@ export default function CapitalSheet({ open, onClose, onSaved }: Props) {
                   id="capDate"
                   type="date"
                   value={date}
-                  onChange={(e) => setDate(e.target.value)}
+                  aria-invalid={dateErr || undefined}
+                  onChange={(e) => { setDate(e.target.value); setDateErr(false); }}
                 />
+                {dateErr && <p className="field-err" role="alert">Tanggal wajib diisi.</p>}
               </div>
             </div>
 
@@ -249,7 +262,7 @@ export default function CapitalSheet({ open, onClose, onSaved }: Props) {
               <button
                 type="submit"
                 className="btn btn-green btn-full"
-                disabled={!canSubmit || saving}
+                disabled={saving}
               >
                 {saving ? 'Menyimpan…' : 'Simpan Suntikan Modal'}
               </button>

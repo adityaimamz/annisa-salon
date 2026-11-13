@@ -366,11 +366,12 @@ body{background:var(--paper);font-size:15px;overflow:hidden}
 .btn-danger[hidden]{display:none}
 .field-err{color:var(--danger);font-size:13px;margin-top:6px}
 
-.toast{position:fixed;left:50%;bottom:90px;transform:translate(-50%,20px);background:var(--ink);color:var(--cream);padding:12px 18px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .2s var(--ease-out),transform .25s var(--ease-out);z-index:100;pointer-events:none;max-width:calc(100vw - 24px);width:max-content}
+.input[aria-invalid="true"]{border-color:var(--danger)}
+.toast{position:fixed;inset:auto auto 90px 50%;margin:0;border:0;overflow:visible;height:auto;transform:translate(-50%,20px);background:var(--ink);color:var(--cream);padding:12px 18px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .2s var(--ease-out),transform .25s var(--ease-out);z-index:100;pointer-events:none;max-width:calc(100vw - 24px);width:max-content}
 .toast.on{opacity:1;transform:translate(-50%,0)}
 /* phone: show toast at the top so it never hides the cart total bar */
 @media (max-width:899px){
-  .toast{top:calc(8px + env(safe-area-inset-top));bottom:auto;transform:translate(-50%,-20px);box-shadow:0 8px 24px rgba(24,32,28,.25)}
+  .toast{inset:calc(8px + env(safe-area-inset-top)) auto auto 50%;transform:translate(-50%,-20px);box-shadow:0 8px 24px rgba(24,32,28,.25)}
 }
 
 /* ===== touch screens: bigger tap targets, 16px inputs (stops iOS auto-zoom) ===== */

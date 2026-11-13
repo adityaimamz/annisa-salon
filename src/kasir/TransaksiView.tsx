@@ -462,6 +462,7 @@ let lineKey = 0;
 function EditSheet({ tx, therapists, items, onClose, onSaved }: {
   tx: Tx | null; therapists: Therapist[]; items: Item[]; onClose: () => void; onSaved: (t: Tx) => void;
 }) {
+  const toast = useToast();
   const [cust, setCust] = useState('');
   const [wa, setWa] = useState('');
   const [pay, setPay] = useState<PayMethod>('Tunai');
@@ -516,7 +517,7 @@ function EditSheet({ tx, therapists, items, onClose, onSaved }: {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!tx || busy) return;
-    if (!valid) return setErr('Setiap layanan harus punya nama.');
+    if (!valid) { setErr('Setiap layanan harus punya nama.'); toast('Setiap layanan harus punya nama', true); return; }
     setBusy(true); setErr('');
     try {
       const updated = await updateTransaction(tx.id, {
@@ -601,7 +602,7 @@ function EditSheet({ tx, therapists, items, onClose, onSaved }: {
 
           {err && <p className="field-err" role="alert">{err}</p>}
           <div className="sheet-actions" style={{ marginTop: 16 }}>
-            <button className="btn btn-green" type="submit" disabled={busy || !valid}>{busy ? 'Menyimpan…' : 'Simpan perubahan'}</button>
+            <button className="btn btn-green" type="submit" disabled={busy}>{busy ? 'Menyimpan…' : 'Simpan perubahan'}</button>
           </div>
         </form>
       )}

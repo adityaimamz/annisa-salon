@@ -21,10 +21,12 @@ export default function ExpenseSheet({ open, editing, knownCats, onClose, onSave
   const [pay, setPay] = useState<'Tunai' | 'Transfer'>('Tunai');
   const [unit, setUnit] = useState<'salon' | 'gbee' | 'operasional'>('operasional');
   const [busy, setBusy] = useState(false);
+  const [errs, setErrs] = useState({ amt: false, note: false, cat: false, date: false });
 
   useEffect(() => {
     if (!open) return;
     setNewCat('');
+    setErrs({ amt: false, note: false, cat: false, date: false });
     if (editing) {
       setDate(dayKey(editing.at));
       setAmt(String(editing.amt));
@@ -44,12 +46,19 @@ export default function ExpenseSheet({ open, editing, knownCats, onClose, onSave
 
   const cats = expenseCats([...knownCats, ...(editing ? [editing.cat] : [])]);
   const catFinal = newCat.trim() || cat;
-  const ok = !!num(amt) && !!note.trim() && !!catFinal;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (busy) return;
     const a = num(amt);
-    if (!ok || busy) return;
+    const bad = { amt: !a, note: !note.trim(), cat: !catFinal, date: !date };
+    setErrs(bad);
+    if (bad.cat || bad.amt || bad.date || bad.note) {
+      const first = bad.cat ? 'expCatNew' : bad.amt ? 'expAmt' : bad.date ? 'expDate' : 'expNote';
+      document.getElementById(first)?.focus();
+      toast(bad.amt ? 'Nominal belum diisi' : bad.date ? 'Tanggal belum diisi' : bad.cat ? 'Pilih kategori dulu' : 'Keterangan wajib diisi', true);
+      return;
+    }
     const [Y, M, D] = date.split('-').map(Number);
     // tanggal tidak diubah -> pertahankan jam aslinya
     const at = editing && date === dayKey(editing.at) ? editing.at : new Date(Y, M - 1, D, 12).getTime();
@@ -90,14 +99,19 @@ export default function ExpenseSheet({ open, editing, knownCats, onClose, onSave
               </label>
             ))}
           </div>
-          <input className="input" style={{ marginTop: 10 }} placeholder="Atau tulis kategori baru" aria-label="Kategori baru"
-            value={newCat} onChange={(e) => setNewCat(e.target.value)} maxLength={40} />
+          <input className="input" id="expCatNew" style={{ marginTop: 10 }} placeholder="Atau tulis kategori baru" aria-label="Kategori baru"
+            value={newCat} onChange={(e) => { setNewCat(e.target.value); setErrs((x) => ({ ...x, cat: false })); }} maxLength={40} aria-invalid={errs.cat || undefined} />
+          {errs.cat && <p className="field-err" role="alert">Pilih kategori atau tulis kategori baru.</p>}
         </div>
         <div className="field row2">
           <div><label htmlFor="expAmt">Nominal</label>
-            <input className="input" id="expAmt" inputMode="numeric" placeholder="Rp0" value={amt ? 'Rp' + money(num(amt)) : ''} onChange={(e) => setAmt(e.target.value)} autoFocus /></div>
+            <input className="input" id="expAmt" inputMode="numeric" placeholder="Rp0" value={amt ? 'Rp' + money(num(amt)) : ''} aria-invalid={errs.amt || undefined}
+              onChange={(e) => { setAmt(e.target.value); setErrs((x) => ({ ...x, amt: false })); }} autoFocus />
+            {errs.amt && <p className="field-err" role="alert">Nominal wajib diisi.</p>}</div>
           <div><label htmlFor="expDate">Tanggal</label>
-            <input className="input" id="expDate" type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
+            <input className="input" id="expDate" type="date" value={date} aria-invalid={errs.date || undefined}
+              onChange={(e) => { setDate(e.target.value); setErrs((x) => ({ ...x, date: false })); }} />
+            {errs.date && <p className="field-err" role="alert">Tanggal wajib diisi.</p>}</div>
         </div>
         <div className="field row2">
           <div>
@@ -117,10 +131,12 @@ export default function ExpenseSheet({ open, editing, knownCats, onClose, onSave
           </div>
         </div>
         <div className="field"><label htmlFor="expNote">Keterangan <span className="opt">(wajib)</span></label>
-          <input className="input" id="expNote" placeholder="Misal: beli cat rambut 6 tube" value={note} onChange={(e) => setNote(e.target.value)} /></div>
+          <input className="input" id="expNote" placeholder="Misal: beli cat rambut 6 tube" value={note} aria-invalid={errs.note || undefined}
+            onChange={(e) => { setNote(e.target.value); setErrs((x) => ({ ...x, note: false })); }} />
+          {errs.note && <p className="field-err" role="alert">Keterangan wajib diisi, misal: beli cat rambut.</p>}</div>
         <div className="sheet-actions two" style={editing ? undefined : { gridTemplateColumns: '1fr' }}>
           <button className="btn btn-line btn-danger" type="button" hidden={!editing} onClick={remove} disabled={busy}>Hapus</button>
-          <button className="btn btn-green" type="submit" disabled={!ok || busy}>
+          <button className="btn btn-green" type="submit" disabled={busy}>
             {busy ? 'Menyimpan…' : editing ? 'Simpan perubahan' : 'Simpan pengeluaran'}
           </button>
         </div>

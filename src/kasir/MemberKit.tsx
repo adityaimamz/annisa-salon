@@ -33,12 +33,19 @@ export function MemberFormSheet({ open, defaultName = '', defaultWa = '', onClos
   const [name, setName] = useState('');
   const [wa, setWa] = useState('');
   const [busy, setBusy] = useState(false);
+  const [nameErr, setNameErr] = useState(false);
 
-  useEffect(() => { if (open) { setName(defaultName); setWa(defaultWa); } }, [open, defaultName, defaultWa]);
+  useEffect(() => { if (open) { setName(defaultName); setWa(defaultWa); setNameErr(false); } }, [open, defaultName, defaultWa]);
 
   async function submit(e: React.SyntheticEvent) {
     e.preventDefault();
-    if (!name.trim() || busy) return;
+    if (busy) return;
+    if (!name.trim()) {
+      setNameErr(true);
+      document.getElementById('memName')?.focus();
+      toast('Nama member belum diisi', true);
+      return;
+    }
     setBusy(true);
     try {
       const m = await createMember(name.trim(), wa.trim());
@@ -57,14 +64,16 @@ export function MemberFormSheet({ open, defaultName = '', defaultWa = '', onClos
         <p className="sub2">Gratis. Berlaku 1 tahun sejak hari ini. Tiap 10 kunjungan, 1 treatment gratis.</p>
         <div className="field" style={{ marginTop: 18 }}>
           <label htmlFor="memName">Nama</label>
-          <input className="input" id="memName" value={name} onChange={(e) => setName(e.target.value)} placeholder="Nama member" />
+          <input className="input" id="memName" value={name} aria-invalid={nameErr || undefined}
+            onChange={(e) => { setName(e.target.value); setNameErr(false); }} placeholder="Nama member" />
+          {nameErr && <p className="field-err" role="alert">Nama wajib diisi.</p>}
         </div>
         <div className="field">
           <label htmlFor="memWa">No. WA <span className="opt">(opsional)</span></label>
           <input className="input" id="memWa" inputMode="tel" value={wa} onChange={(e) => setWa(e.target.value)} placeholder="08…" />
         </div>
         <div className="sheet-actions">
-          <button className="btn btn-green" type="submit" disabled={!name.trim() || busy}>{busy ? 'Mendaftarkan…' : 'Daftarkan member'}</button>
+          <button className="btn btn-green" type="submit" disabled={busy}>{busy ? 'Mendaftarkan…' : 'Daftarkan member'}</button>
         </div>
       </form>
     </Sheet>

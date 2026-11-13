@@ -12,15 +12,25 @@ export const useToast = () => useContext(ToastCtx);
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [t, setT] = useState<{ msg: string; err: boolean; on: boolean }>({ msg: '', err: false, on: false });
   const timer = useRef<number>(0);
+  const el = useRef<HTMLDivElement>(null);
   const toast = useCallback<ToastFn>((msg, err = false) => {
     setT({ msg, err, on: true });
+    // Dialog modal (Sheet) tampil di top layer sehingga menutupi toast biasa, termasuk pesan
+    // gagal simpan. Tampilkan toast sebagai popover agar selalu berada di atas dialog.
+    const n = el.current;
+    try {
+      if (n?.showPopover) {
+        if (n.matches(':popover-open')) n.hidePopover();
+        n.showPopover();
+      }
+    } catch { /* browser lama: toast tetap tampil seperti biasa */ }
     window.clearTimeout(timer.current);
     timer.current = window.setTimeout(() => setT((x) => ({ ...x, on: false })), err ? 4200 : 2200);
   }, []);
   return (
     <ToastCtx.Provider value={toast}>
       {children}
-      <div className={`toast${t.on ? ' on' : ''}${t.err ? ' err' : ''}`} role="status">{t.msg}</div>
+      <div ref={el} popover="manual" className={`toast${t.on ? ' on' : ''}${t.err ? ' err' : ''}`} role="status" aria-live="polite">{t.msg}</div>
     </ToastCtx.Provider>
   );
 }
