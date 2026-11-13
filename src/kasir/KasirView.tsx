@@ -45,6 +45,8 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
   const [members, setMembers] = useState<Member[]>([]);
   const [memberId, setMemberId] = useState<number | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [backdate, setBackdate] = useState(false); // owner: catat sebagai transaksi kemarin
+  const isOwner = profile.role === 'owner';
 
   const refreshMembers = useCallback(async () => {
     try { const m = await loadMembers(); setMembers(m); return m; } catch { return null; }
@@ -136,7 +138,8 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
     if (!ok || paying) return;
     setPaying(true);
     const clientId = crypto.randomUUID();
-    const createdAt = Date.now();
+    // Kemarin: jam sekarang tetapi tanggal mundur satu hari (urutan struk tetap wajar)
+    const createdAt = isOwner && backdate ? new Date().setDate(new Date().getDate() - 1) : Date.now();
     const memberFree = hasFree && !!member;
     const payLines = cart.map((l) => (l.free && member ? { ...l, price: 0, name: `${l.name} (Gratis member)` } : l));
     const input = {
@@ -150,7 +153,7 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
     }));
     const reset = () => {
       setCart([]); setCust(''); setWa(''); setMemberId(null); setDisc(''); setDiscMode('rp'); setCashIn(''); setPay('Tunai');
-      setCartOpen(false);
+      setCartOpen(false); setBackdate(false);
     };
     try {
       let tx: Tx;
@@ -299,6 +302,13 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
                 <span>Porsi</span>
                 <span>Salon: {rp(totSalon)} · Gbee: {rp(totGbee)}</span>
               </div>
+            )}
+            {isOwner && (
+              <div className="rowx"><span>Tanggal transaksi</span>
+                <span className="seg seg-sm" role="group" aria-label="Tanggal transaksi">
+                  <button type="button" aria-pressed={!backdate} onClick={() => setBackdate(false)}>Hari ini</button>
+                  <button type="button" aria-pressed={backdate} onClick={() => setBackdate(true)}>Kemarin</button>
+                </span></div>
             )}
             <div className="pay" role="radiogroup" aria-label="Metode bayar">
               {(['Tunai', 'QRIS', 'Transfer'] as PayMethod[]).map((m) => (

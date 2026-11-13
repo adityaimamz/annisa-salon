@@ -255,11 +255,13 @@ export async function updateTransaction(
   id: number,
   p: {
     customer: string; wa: string; discount: number; pay: PayMethod;
+    at?: number; // waktu baru; kosong = tidak diubah
     lines: { catalogId: string | null; cat: string | null; name: string; price: number; qty: number; unit?: BusinessUnit; terapisId: number | null }[];
   },
 ): Promise<Tx> {
   const { error } = await db().rpc('update_transaction', {
     p_id: id, p_customer: p.customer, p_customer_wa: p.wa, p_discount: p.discount, p_pay: p.pay,
+    ...(p.at ? { p_created_at: new Date(p.at).toISOString() } : {}),
     p_items: p.lines.map((l) => ({
       catalog_item_id: l.catalogId, category_id: l.cat, name: l.name, price: l.price, qty: l.qty,
       business_unit: l.unit ?? (l.cat === 'produk' ? 'gbee' : 'salon'),

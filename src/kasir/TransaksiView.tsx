@@ -466,6 +466,7 @@ function EditSheet({ tx, therapists, items, onClose, onSaved }: {
   const [cust, setCust] = useState('');
   const [wa, setWa] = useState('');
   const [pay, setPay] = useState<PayMethod>('Tunai');
+  const [date, setDate] = useState('');
   const [disc, setDisc] = useState('');
   const [lines, setLines] = useState<EditLine[]>([]);
   const [err, setErr] = useState('');
@@ -473,7 +474,7 @@ function EditSheet({ tx, therapists, items, onClose, onSaved }: {
 
   useEffect(() => {
     if (!tx) return;
-    setCust(tx.cust); setWa(tx.wa); setErr(''); setPay(tx.pay);
+    setCust(tx.cust); setWa(tx.wa); setErr(''); setPay(tx.pay); setDate(dayKey(tx.at));
     setDisc(tx.disc ? String(tx.disc) : '');
     setLines(tx.lines.map((l) => ({
       key: ++lineKey, catalogId: l.id, cat: l.cat, name: l.name, price: String(l.price), qty: l.qty,
@@ -518,10 +519,19 @@ function EditSheet({ tx, therapists, items, onClose, onSaved }: {
     e.preventDefault();
     if (!tx || busy) return;
     if (!valid) { setErr('Setiap layanan harus punya nama.'); toast('Setiap layanan harus punya nama', true); return; }
+    if (!date) { setErr('Tanggal wajib diisi.'); toast('Tanggal wajib diisi', true); return; }
+    if (date > dayKey(new Date())) { setErr('Tanggal tidak boleh di masa depan.'); toast('Tanggal tidak boleh di masa depan', true); return; }
+    // tanggal tidak diubah -> jam asli dipertahankan; diubah -> jam asli di tanggal baru
+    let at: number | undefined;
+    if (date !== dayKey(tx.at)) {
+      const [Y, M, D] = date.split('-').map(Number);
+      const o = new Date(tx.at);
+      at = Math.min(new Date(Y, M - 1, D, o.getHours(), o.getMinutes(), o.getSeconds()).getTime(), Date.now());
+    }
     setBusy(true); setErr('');
     try {
       const updated = await updateTransaction(tx.id, {
-        customer: cust.trim(), wa: wa.trim(), discount, pay,
+        customer: cust.trim(), wa: wa.trim(), discount, pay, at,
         lines: lines.map((l) => ({
           catalogId: l.catalogId, cat: l.cat, name: l.name.trim(), price: priceOf(l), qty: l.qty,
           terapisId: l.terapis ? Number(l.terapis) : null,
@@ -547,6 +557,11 @@ function EditSheet({ tx, therapists, items, onClose, onSaved }: {
               <input className="input" id="etCust" value={cust} onChange={(e) => setCust(e.target.value)} /></div>
             <div><label htmlFor="etWa">No. WA <span className="opt">(opsional)</span></label>
               <input className="input" id="etWa" inputMode="tel" value={wa} onChange={(e) => setWa(e.target.value)} /></div>
+          </div>
+
+          <div className="field">
+            <label htmlFor="etDate">Tanggal transaksi</label>
+            <input className="input" id="etDate" type="date" max={dayKey(new Date())} value={date} onChange={(e) => setDate(e.target.value)} />
           </div>
 
           <div className="field">
