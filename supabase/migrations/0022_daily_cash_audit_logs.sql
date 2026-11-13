@@ -98,3 +98,4 @@ end $$;
 
 revoke execute on function public.list_daily_cash_logs(integer) from public, anon;
 grant execute on function public.list_daily_cash_logs(integer) to authenticated;
+
