@@ -10,7 +10,7 @@ import { calcPortion } from './TransaksiView';
 import type { Category, DailyCashSummary, Expense, Tx } from './types';
 import { useToast } from './ui';
 
-type Range = 'today' | '7' | '30' | 'month' | 'lastmonth' | 'custom';
+type Range = 'today' | 'yesterday' | '7' | '30' | 'month' | 'lastmonth' | 'custom';
 const MAX_DAYS = 366;
 const PAYC: Record<string, string> = { Tunai: '#1F8A5B', QRIS: '#6A63C9', Transfer: '#7A817C' };
 
@@ -47,13 +47,14 @@ export default function KeuanganView({ cats, refreshKey, onOpenPengeluaran }: { 
   }, [refreshKey, version, range === 'custom' ? from : '', range === 'custom' ? to : '']);
 
   const isSingleDay = useMemo(() => {
-    if (range === 'today') return true;
+    if (range === 'today' || range === 'yesterday') return true;
     if (range === 'custom' && from && (!to || from === to)) return true;
     return false;
   }, [range, from, to]);
 
   const targetDay = useMemo(() => {
     if (range === 'custom' && from) return from;
+    if (range === 'yesterday') return dayKey(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1));
     return dayKey(today);
   }, [range, from, today]);
 
@@ -73,6 +74,8 @@ export default function KeuanganView({ cats, refreshKey, onOpenPengeluaran }: { 
     const f = from ? new Date(`${from}T00:00:00`) : null, u = to ? new Date(`${to}T00:00:00`) : null;
     if (range === 'today') {
       days = [new Date(today)];
+    } else if (range === 'yesterday') {
+      days = [new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1)];
     } else if (range === 'custom' && f && u && u >= f) {
       const len = Math.min(MAX_DAYS, Math.round((u.getTime() - f.getTime()) / 864e5) + 1);
       days = Array.from({ length: len }, (_, i) => new Date(f.getFullYear(), f.getMonth(), f.getDate() + i));
@@ -201,7 +204,7 @@ export default function KeuanganView({ cats, refreshKey, onOpenPengeluaran }: { 
     v: tx.filter((t) => t.pay === p).reduce((a, t) => a + (unitFilter === 'all' ? t.total : calcPortion(t)[unitFilter]), 0),
   }));
   const expSorted = ex.slice().sort((a, b) => b.at - a.at);
-  const seg: [Range, string][] = [['today', 'Hari ini'], ['7', '7 hari'], ['30', '30 hari'], ['month', 'Bulan ini'], ['lastmonth', 'Bulan lalu'], ['custom', 'Pilih tanggal']];
+  const seg: [Range, string][] = [['today', 'Hari ini'], ['yesterday', 'Kemarin'], ['7', '7 hari'], ['30', '30 hari'], ['month', 'Bulan ini'], ['lastmonth', 'Bulan lalu'], ['custom', 'Pilih tanggal']];
   const hoverNone = typeof matchMedia !== 'undefined' && matchMedia('(hover: none)').matches;
 
   return (
