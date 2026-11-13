@@ -429,7 +429,7 @@ export default function TransaksiView({ refreshKey, therapists, items }: { refre
                     <td className="c-time">{fmtTime(t.at)}</td>
                     <td className="c-no muted">{t.no}</td>
                     <td className="c-items">
-                      <div>{t.cust || 'Pelanggan'}</div>
+                      <div>{t.cust || 'Pelanggan'}{t.lines.some((l) => l.name.includes('(Harga reseller)')) && <span className="opt"> · Reseller</span>}</div>
                       <div className="muted">{t.lines.map((l) => l.name + (l.qty > 1 ? ' ×' + l.qty : '')).join(', ')}</div>
                     </td>
                     <td className="c-pay"><span className="pill">{t.pay}</span></td>

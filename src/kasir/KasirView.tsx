@@ -3,7 +3,7 @@ import { createTransaction, loadMembers } from './api';
 import { MemberPicker, MemberTags } from './MemberKit';
 import { MEMBER_GOAL, fmtDate, memberStat } from './member';
 import { enqueue, isNetworkError } from './offline';
-import { dayKey, money, num, rp, rpk } from './format';
+import { dayKey, fmtDay, money, num, rp, rpk } from './format';
 import type { CartLine, Category, Item, Member, PayMethod, Profile, Therapist, Tx } from './types';
 import { CloseBtn, Icon, ReceiptSheet, Select, Sheet, useToast } from './ui';
 
@@ -77,6 +77,7 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
   const totSalon = Math.max(0, subSalon - discSalon);
   const totGbee = Math.max(0, subGbee - (discount - discSalon));
   const count = cart.reduce((a, l) => a + l.qty, 0);
+  const noResell = reseller ? cart.filter((l) => !l.service && !l.resell && !l.free).length : 0;
   const cash = num(cashIn);
   const change = cash - total;
   const missingTherapist = cart.some((l) => l.service && !l.terapis);
@@ -226,7 +227,9 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
                         <span className="n">{it.name}</span>
                         {it.k && <span className="k" style={{ display: 'block' }}>{it.k}</span>}
                       </span>
-                      <span className="p">{priceLabel(it)}</span>
+                      {reseller && it.resellPrice && !it.variants?.length
+                        ? <span className="p">{rp(it.resellPrice)}<small>reseller</small></span>
+                        : <span className="p">{priceLabel(it)}</span>}
                       {n > 0 && <span className="badge" key={n}>{n}</span>}
                     </button>
                   );
@@ -250,11 +253,6 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
               <input className="input" placeholder="Nama pelanggan" aria-label="Nama pelanggan" value={cust} onChange={(e) => setCust(e.target.value)} />
               <input className="input" placeholder="No. WA (opsional)" inputMode="tel" aria-label="Nomor WhatsApp pelanggan" value={wa} onChange={(e) => setWa(e.target.value)} />
             </div>
-            <div className="rowx" style={{ margin: '8px 0' }}><span>Jenis pelanggan</span>
-              <span className="seg seg-sm" role="group" aria-label="Jenis pelanggan">
-                <button type="button" aria-pressed={!reseller} onClick={() => setReseller(false)}>Biasa</button>
-                <button type="button" aria-pressed={reseller} onClick={() => setReseller(true)}>Reseller</button>
-              </span></div>
             {member && mstat ? (
               <div className="mem-chip">
                 <div>
@@ -272,7 +270,7 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
               <div className="line" key={l.key + i}>
                 <div className="line-top">
                   <span className="n">{l.name}</span><span className="amt">{l.free ? 'Gratis' : rp(eff(l, reseller) * l.qty)}</span>
-                  <span className="v">{l.free ? 'Gratis member' : rp(eff(l, reseller)) + (reseller && l.resell ? ' · reseller' : '') + (l.qty > 1 ? ' × ' + l.qty : '')}</span>
+                  <span className="v">{l.free ? 'Gratis member' : rp(eff(l, reseller)) + (reseller && l.resell ? ' · reseller' : reseller && !l.service && !l.free ? ' · harga normal' : '') + (l.qty > 1 ? ' × ' + l.qty : '')}</span>
                 </div>
                 <div className="line-bot">
                   {l.service ? (
@@ -298,6 +296,14 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
             )}
           </div>
           <div className="cart-foot">
+            <div className="rowx"><span>Jenis pelanggan</span>
+              <span className="seg seg-sm" role="group" aria-label="Jenis pelanggan">
+                <button type="button" aria-pressed={!reseller} onClick={() => setReseller(false)}>Biasa</button>
+                <button type="button" aria-pressed={reseller} onClick={() => setReseller(true)}>Reseller</button>
+              </span></div>
+            {noResell > 0 && (
+              <div className="rowx disc-note" role="status">{noResell} produk belum punya harga reseller, dihitung harga normal.</div>
+            )}
             <div className="rowx"><span>Subtotal</span><b>{rp(sub)}</b></div>
             <div className="rowx"><label htmlFor="disc">Diskon</label>
               <span className="disc-ctl">
@@ -323,6 +329,9 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
                 <input className="input disc" id="txDate" type="date" style={{ width: 'auto' }}
                   min={dayKey(Date.now() - 14 * 864e5)} max={dayKey(Date.now())}
                   value={txDate || dayKey(Date.now())} onChange={(e) => setTxDate(e.target.value)} /></div>
+            )}
+            {isOwner && txDate && txDate !== dayKey(Date.now()) && (
+              <div className="rowx disc-note" role="status">Tercatat sebagai transaksi tanggal {fmtDay(new Date(txDate + 'T00:00:00'), { day: 'numeric', month: 'long' })}.</div>
             )}
             <div className="pay" role="radiogroup" aria-label="Metode bayar">
               {(['Tunai', 'QRIS', 'Transfer'] as PayMethod[]).map((m) => (
@@ -354,7 +363,7 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
 
       {count > 0 && (
         <button className="cartbar2" type="button" onClick={() => setCartOpen(true)}>
-          <span><span>{count} item</span> · <span className="t">{rp(total)}</span></span>
+          <span><span>{count} item{reseller ? ' · Reseller' : ''}</span> · <span className="t">{rp(total)}</span></span>
           <span className="go">Lihat pesanan</span>
         </button>
       )}

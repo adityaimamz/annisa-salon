@@ -338,6 +338,7 @@ export function ReceiptSheet({ tx, fresh, onClose, onEdit, onDelete }: {
             <div className="r"><span>{t.no}</span><span>{fmtDay(t.at, { day: '2-digit', month: '2-digit', year: 'numeric' })} {fmtTime(t.at)}</span></div>
             <div className="r"><span>Pelanggan</span><span>{t.cust || '-'}</span></div>
             <div className="r"><span>Kasir</span><span>{t.kasir}</span></div>
+            {t.lines.some((l) => l.name.includes('(Harga reseller)')) && <div className="r"><span>Jenis pelanggan</span><span>Reseller</span></div>}
             <hr />
             {t.lines.map((l, i) => (
               <div key={i}>
