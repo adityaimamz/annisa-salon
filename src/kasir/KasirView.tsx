@@ -266,6 +266,14 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
             ) : (
               <button className="linkbtn mem-add" type="button" onClick={() => setPickerOpen(true)}>+ Member</button>
             )}
+            <div className="rowx cust-type"><span>Jenis pelanggan</span>
+              <span className="seg seg-sm" role="group" aria-label="Jenis pelanggan">
+                <button type="button" aria-pressed={!reseller} onClick={() => setReseller(false)}>Biasa</button>
+                <button type="button" aria-pressed={reseller} onClick={() => setReseller(true)}>Reseller</button>
+              </span></div>
+            {noResell > 0 && (
+              <div className="rowx disc-note" role="status">{noResell} produk belum punya harga reseller, dihitung harga normal.</div>
+            )}
             {cart.length ? cart.map((l, i) => (
               <div className="line" key={l.key + i}>
                 <div className="line-top">
@@ -296,14 +304,6 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
             )}
           </div>
           <div className="cart-foot">
-            <div className="rowx"><span>Jenis pelanggan</span>
-              <span className="seg seg-sm" role="group" aria-label="Jenis pelanggan">
-                <button type="button" aria-pressed={!reseller} onClick={() => setReseller(false)}>Biasa</button>
-                <button type="button" aria-pressed={reseller} onClick={() => setReseller(true)}>Reseller</button>
-              </span></div>
-            {noResell > 0 && (
-              <div className="rowx disc-note" role="status">{noResell} produk belum punya harga reseller, dihitung harga normal.</div>
-            )}
             <div className="rowx"><span>Subtotal</span><b>{rp(sub)}</b></div>
             <div className="rowx"><label htmlFor="disc">Diskon</label>
               <span className="disc-ctl">
@@ -324,15 +324,7 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
                 <span>Salon: {rp(totSalon)} · Gbee: {rp(totGbee)}</span>
               </div>
             )}
-            {isOwner && (
-              <div className="rowx"><label htmlFor="txDate">Tanggal transaksi</label>
-                <input className="input disc" id="txDate" type="date" style={{ width: 'auto' }}
-                  min={dayKey(Date.now() - 14 * 864e5)} max={dayKey(Date.now())}
-                  value={txDate || dayKey(Date.now())} onChange={(e) => setTxDate(e.target.value)} /></div>
-            )}
-            {isOwner && txDate && txDate !== dayKey(Date.now()) && (
-              <div className="rowx disc-note" role="status">Tercatat sebagai transaksi tanggal {fmtDay(new Date(txDate + 'T00:00:00'), { day: 'numeric', month: 'long' })}.</div>
-            )}
+            <div className="rowx pay-label"><span>Metode bayar</span></div>
             <div className="pay" role="radiogroup" aria-label="Metode bayar">
               {(['Tunai', 'QRIS', 'Transfer'] as PayMethod[]).map((m) => (
                 <label key={m}><input type="radio" name="pay" value={m} checked={pay === m} onChange={() => setPay(m)} /><span>{m}</span></label>
@@ -351,6 +343,15 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
                   <b className={`change${cash > 0 && change < 0 ? ' neg' : ''}`}>{cash ? (change < 0 ? 'Kurang ' + rp(-change) : rp(change)) : '–'}</b></div>
               </div>
             )}
+            {isOwner && (
+              <div className="rowx"><label htmlFor="txDate">Tanggal transaksi</label>
+                <input className="input disc" id="txDate" type="date" style={{ width: 'auto' }}
+                  min={dayKey(Date.now() - 14 * 864e5)} max={dayKey(Date.now())}
+                  value={txDate || dayKey(Date.now())} onChange={(e) => setTxDate(e.target.value)} /></div>
+            )}
+            {isOwner && txDate && txDate !== dayKey(Date.now()) && (
+              <div className="rowx disc-note" role="status">Tercatat sebagai transaksi tanggal {fmtDay(new Date(txDate + 'T00:00:00'), { day: 'numeric', month: 'long' })}.</div>
+            )}
           </div>
           <div className="cart-act">
             <p className="hint">{hint}</p>
@@ -361,7 +362,7 @@ export default function KasirView({ cats, items, therapists, profile, onPaid, on
         </aside>
       </div>
 
-      {count > 0 && (
+      {count > 0 && !cartOpen && (
         <button className="cartbar2" type="button" onClick={() => setCartOpen(true)}>
           <span><span>{count} item{reseller ? ' · Reseller' : ''}</span> · <span className="t">{rp(total)}</span></span>
           <span className="go">Lihat pesanan</span>
