@@ -212,7 +212,7 @@ export default function KeuanganView({ cats, refreshKey, onOpenPengeluaran }: { 
       <div className="v-head">
         <div><h1>Keuangan</h1>
           <p className="meta">{fmtDay(d.start, { day: 'numeric', month: 'short' })} – {fmtDay(d.last, { day: 'numeric', month: 'short', year: 'numeric' })}</p></div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div className="v-tools">
           <div className="seg seg-sm">
             <button type="button" aria-pressed={unitFilter === 'all'} onClick={() => setUnitFilter('all')}>Semua Unit</button>
             <button type="button" aria-pressed={unitFilter === 'salon'} onClick={() => setUnitFilter('salon')}>Salon</button>

@@ -55,6 +55,7 @@ body{background:var(--paper);font-size:15px;overflow:hidden}
 .v-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;padding:24px 24px 16px}
 @media (max-width:600px){.v-head{padding:18px 16px 12px}}
 .v-head h1{font-family:var(--serif);font-weight:400;font-size:32px;line-height:1}
+.v-tools{display:flex;gap:8px;flex-wrap:wrap;min-width:0;max-width:100%}
 .v-head .meta{color:var(--ink-3);font-size:14px;margin-top:6px}
 .pad{padding:0 24px 32px}
 @media (max-width:600px){.pad{padding:0 16px 24px}}
@@ -538,6 +539,7 @@ body{background:var(--paper);font-size:15px;overflow:hidden}
 }
 /* baris pilihan rentang: satu baris, geser ke samping di HP */
 @media (max-width:700px){
+  .v-head>.v-tools{flex:1 1 100%}
   .seg-scroll{display:flex;width:100%;overflow-x:auto;scrollbar-width:none;overscroll-behavior-x:contain}
   .seg-scroll::-webkit-scrollbar{display:none}
   .seg-scroll button{flex:none;white-space:nowrap}
