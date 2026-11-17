@@ -177,7 +177,7 @@ export default function KeuanganView({ cats, refreshKey, onOpenPengeluaran }: { 
         ? (cashSummary ? cashSummary.expected_cash : modalAwal + incTunai - outTunai)
         : (unitFilter === 'salon'
             ? modalAwal + incTunai - outTunai
-            : inc - out))
+            : incTunai - outTunai))
     : inc - out + (unitFilter !== 'gbee' ? modalAwal : 0);
 
   const lines = tx.flatMap((t) => t.lines.filter((l) => {
