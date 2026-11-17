@@ -169,15 +169,14 @@ export default function KeuanganView({ cats, refreshKey, onOpenPengeluaran }: { 
     }
   }
 
-  const incTunai = tx.filter((t) => t.pay === 'Tunai').reduce((a, t) => a + (unitFilter === 'all' ? t.total : calcPortion(t)[unitFilter]), 0);
-  const outTunai = ex.filter((x) => (x.pay ?? 'Tunai') === 'Tunai').reduce((a, x) => a + x.amt, 0);
+  // Kas laci hanya memuat uang Salon: tunai Gbee dan pengeluaran Gbee tidak masuk laci.
+  const incTunai = tx.filter((t) => t.pay === 'Tunai').reduce((a, t) => a + calcPortion(t).salon, 0);
+  const outTunai = ex.filter((x) => (x.pay ?? 'Tunai') === 'Tunai' && x.unit !== 'gbee').reduce((a, x) => a + x.amt, 0);
 
   const cleanNetCash = isSingleDay
-    ? (unitFilter === 'all'
-        ? (cashSummary ? cashSummary.expected_cash : modalAwal + incTunai - outTunai)
-        : (unitFilter === 'salon'
-            ? modalAwal + incTunai - outTunai
-            : incTunai - outTunai))
+    ? (unitFilter === 'gbee'
+        ? inc - out
+        : (cashSummary && unitFilter === 'all' ? cashSummary.expected_cash : modalAwal + incTunai - outTunai))
     : inc - out + (unitFilter !== 'gbee' ? modalAwal : 0);
 
   const lines = tx.flatMap((t) => t.lines.filter((l) => {
@@ -238,7 +237,11 @@ export default function KeuanganView({ cats, refreshKey, onOpenPengeluaran }: { 
             </b>
             <small>
               {isSingleDay ? (
-                <>Laba usaha {rp(inc - out)} · Sisa kas laci {rp(cleanNetCash)}</>
+                unitFilter === 'gbee' ? (
+                  <>Laba usaha Gbee {rp(inc - out)} · di luar kas laci</>
+                ) : (
+                  <>Laba usaha {rp(inc - out)} · Sisa kas laci {rp(cleanNetCash)}</>
+                )
               ) : (
                 modalAwal > 0 && unitFilter !== 'gbee' ? (
                   <>Laba usaha {rp(inc - out)} · Modal/suntikan (+M) +{rp(modalAwal)}</>

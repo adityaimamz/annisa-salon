@@ -72,7 +72,8 @@ export default function BukuKasSheet({ open, onClose, role, initialDay, onSaved 
   const withdrawn = num(withdrawnInput);
   const actual = actualInput.trim() !== '' ? num(actualInput) : null;
   const nonCashTotal = (s?.qris_sales_total ?? 0) + (s?.transfer_sales_total ?? 0);
-  const expected = opening + (s?.cash_sales_total ?? 0) - (s?.cash_expenses ?? 0) - withdrawn;
+  // Laci hanya Salon: tunai Gbee tidak dihitung (cash_expenses sudah tanpa pengeluaran Gbee dari server)
+  const expected = opening + (s?.cash_sales_salon ?? 0) - (s?.cash_expenses ?? 0) - withdrawn;
   const diff = actual !== null ? actual - expected : null;
 
   async function handleSaveOpening() {
@@ -140,11 +141,11 @@ export default function BukuKasSheet({ open, onClose, role, initialDay, onSaved 
       lines.push(`(Belum ada transaksi)`);
     }
 
-    const subKotor = opening + s.total_sales;
+    const subKotor = opening + s.cash_sales_salon + s.qris_sales_salon + s.transfer_sales_salon;
     lines.push(`─────────────────────────────`);
     lines.push(`Subtotal Kotor : Rp ${money(subKotor)}`);
-    if (s.qris_sales_total > 0) lines.push(`(-) QRIS : -Rp ${money(s.qris_sales_total)}`);
-    if (s.transfer_sales_total > 0) lines.push(`(-) Transfer : -Rp ${money(s.transfer_sales_total)}`);
+    if (s.qris_sales_salon > 0) lines.push(`(-) QRIS : -Rp ${money(s.qris_sales_salon)}`);
+    if (s.transfer_sales_salon > 0) lines.push(`(-) Transfer : -Rp ${money(s.transfer_sales_salon)}`);
     if (s.cash_expenses > 0) lines.push(`(-) Pengeluaran Tunai : -Rp ${money(s.cash_expenses)}`);
     if (withdrawn > 0) lines.push(`(-) Setor ke Owner : -Rp ${money(withdrawn)}`);
     lines.push(`─────────────────────────────`);
@@ -249,21 +250,21 @@ export default function BukuKasSheet({ open, onClose, role, initialDay, onSaved 
               {/* Subtotal Kotor & Pengurangan */}
               <div style={{ display: 'grid', gap: 6, fontSize: 13.5 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--ink-2)' }}>
-                  <span>Subtotal Kotor (M + Transaksi)</span>
-                  <b style={{ fontVariantNumeric: 'tabular-nums' }}>{rp(opening + s.total_sales)}</b>
+                  <span>Subtotal Kotor (M + Transaksi Salon)</span>
+                  <b style={{ fontVariantNumeric: 'tabular-nums' }}>{rp(opening + s.cash_sales_salon + s.qris_sales_salon + s.transfer_sales_salon)}</b>
                 </div>
 
-                {s.qris_sales_total > 0 && (
+                {s.qris_sales_salon > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', color: '#B4372F' }}>
                     <span>(-) Non-Tunai (QRIS)</span>
-                    <span style={{ fontVariantNumeric: 'tabular-nums' }}>- {rp(s.qris_sales_total)}</span>
+                    <span style={{ fontVariantNumeric: 'tabular-nums' }}>- {rp(s.qris_sales_salon)}</span>
                   </div>
                 )}
 
-                {s.transfer_sales_total > 0 && (
+                {s.transfer_sales_salon > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', color: '#B4372F' }}>
                     <span>(-) Non-Tunai (Transfer)</span>
-                    <span style={{ fontVariantNumeric: 'tabular-nums' }}>- {rp(s.transfer_sales_total)}</span>
+                    <span style={{ fontVariantNumeric: 'tabular-nums' }}>- {rp(s.transfer_sales_salon)}</span>
                   </div>
                 )}
 
