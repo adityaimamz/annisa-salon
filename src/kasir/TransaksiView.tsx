@@ -219,6 +219,11 @@ export default function TransaksiView({ refreshKey, therapists, items }: { refre
   const sumTunai = list
     .filter((t) => t.pay === 'Tunai')
     .reduce((a, t) => a + (unitF === 'all' ? t.total : calcPortion(t)[unitF]), 0);
+  // Kas laci hanya memuat uang Salon; tunai Gbee tidak ikut ke "Total Kas Masuk" (kecuali filter Gbee).
+  const sumTunaiSalon = list.filter((t) => t.pay === 'Tunai').reduce((a, t) => a + calcPortion(t).salon, 0);
+  const kasMasuk = unitF === 'gbee'
+    ? (isSingleDay ? sumTunai : sum)
+    : (isSingleDay ? sumTunaiSalon : sumSalon) + modal;
   const multi = range !== 'today' && range !== 'yesterday';
   const short = { day: 'numeric', month: 'short' } as const;
   let meta: string;
@@ -288,7 +293,7 @@ export default function TransaksiView({ refreshKey, therapists, items }: { refre
           <div>
             <span>💰 Total Kas Masuk</span>
             <b style={{ color: 'var(--green, #1F8A5B)', fontVariantNumeric: 'tabular-nums' }}>
-              {rp((isSingleDay ? sumTunai : sum) + (unitF !== 'gbee' ? modal : 0))}
+              {rp(kasMasuk)}
             </b>
             <span style={{ display: 'block', fontSize: 11.5, color: 'var(--ink-3)', marginTop: 2 }}>
               {isSingleDay
